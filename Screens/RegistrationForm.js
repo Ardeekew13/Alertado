@@ -7,7 +7,7 @@ import {createUserWithEmailAndPassword,getAuth } from 'firebase/auth';
 import firestore  from '@react-native-firebase/firestore';
 
 
-const roles =['','Citizen', 'Police'];
+const roles =['','Citizen', 'Police','Admin'];
 
 const RegistrationForm = () => {
   const [isSignedIn,setIsSignedIn]=useState(false);
@@ -23,59 +23,96 @@ const RegistrationForm = () => {
 
  
   const handleSubmit = async () => {
-    if (name.length ===0){
-      setNameError('Name is required');
-    }
-    else if (!email.includes('@')){
-      setEmailError('Invalid Email');
-    }
-    
-    else if (password.length <6){
-      setPasswordError('Password must be at least 6 characters');
-    }
-    else if (email.indexOf(' ')> 0){
-      setPasswordError('Password cannot contain spaces')
-    }
-    else if (email.length ===0){
-      setEmailError('Email is required')
-    }
-    else if (email.indexOf(' ')> 0){
-      setEmailError('Email cannot contain spaces')
-    }
-    else if(password!==confirmPassword){
-      setPasswordError('Password does not match')
-    }
-    else if (!role){
-      setRoleError('Role is empty')
-    }
-    else{
-      setNameError('');
-      setPasswordError('');
-      setEmailError('');
-      setRoleError('');
-      
+    let errorType = null;
+    switch (true) {
+      case name.length === 0:
+        errorType = "Name is required";
+        break;
+      case !email.includes("@"):
+        errorType = "Invalid Email";
+        break;
+      case password.length < 6:
+        errorType = "Password must be at least 6 characters";
+        break;
+      case email.indexOf(" ") > 0:
+        errorType = "Email cannot contain spaces";
+        break;
+      case email.length === 0:
+        errorType = "Email is required";
+        break;
+      case password.indexOf(" ") > 0:
+        errorType = "Password cannot contain spaces";
+        break;
+      case password !== confirmPassword:
+        errorType = "Password does not match";
+        break;
+      case !role:
+        errorType = "Role is empty";
+        break;
+      default:
+        break;
     }
   
-
-  try{
-    const authentication = getAuth();
-    const userCredentials= await createUserWithEmailAndPassword(authentication,email,password);
-    const user =userCredentials.user;
-
-    const db =getFirestore();
-    const usersCollection = collection(db,'User');
-    const userDoc = doc(usersCollection,user.uid)
-    await setDoc(userDoc, {
-      email,
-      name,
-      password,
-      confirmPassword,
-      role,
-    });
-    console.log("User registered with ID:");
-  }catch(error){
-    console.error('Error adding user:',error);
-  }
+    if (errorType) {
+      switch (errorType) {
+        case "Name is required":
+          setNameError(errorType);
+          break;
+        case "Invalid Email":
+          setEmailError(errorType);
+          break;
+        case "Password must be at least 6 characters":
+          setPasswordError(errorType);
+          break;
+        case "Email cannot contain spaces":
+          setEmailError(errorType);
+          break;
+        case "Email is required":
+          setEmailError(errorType);
+          break;
+        case "Password cannot contain spaces":
+          setPasswordError(errorType);
+          break;
+        case "Password does not match":
+          setPasswordError(errorType);
+          break;
+        case "Role is empty":
+          setRoleError(errorType);
+          break;
+        default:
+          break;
+      }
+    } else {
+      setNameError("");
+      setPasswordError("");
+      setEmailError("");
+      setRoleError("");
+  
+      try {
+        const authentication = getAuth();
+        const userCredentials = await createUserWithEmailAndPassword(
+          authentication,
+          email,
+          password
+        );
+        const user = userCredentials.user;
+  
+        const db = getFirestore();
+        const usersCollection = collection(db, "User");
+        const userDoc = doc(usersCollection, user.uid);
+        await setDoc(userDoc, {
+          email,
+          name,
+          password,
+          confirmPassword,
+          role,
+          status: "Unverified",
+        });
+        console.log("User registered with ID:");
+      } catch (error) {
+        console.error("Error adding user:", error);
+      }
+    }
   };
   return (
     <KeyboardAvoidingView behavior={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
@@ -101,7 +138,6 @@ const RegistrationForm = () => {
           placeholder="Enter your Email"
           value={email}
           onChangeText={(email)=>{setEmail(email)}}
-          
         />
         <Text className="mx-auto color-red-500">{emailError} </Text>
         <Text className="ml-5 mb-2 text-sm">Select a role</Text>

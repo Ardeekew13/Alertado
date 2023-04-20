@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button} from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button,SafeAreaView} from 'react-native';
 import { collection,query,where,doc, getDoc} from 'firebase/firestore';
 import {signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { db,authentication } from '../firebaseConfig';
 import { useNavigation } from '@react-navigation/core';
 import RegistrationForm from './RegistrationForm';
-
-const LoginForm = () => {
+export default LoginForm = () => {
+  const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [role, setRole]=useState('');
-  const[isSignedIn,setIsSignedIn]=useState(false);
   const navigation=useNavigation()
 const handleLogin = async () => {
   try{
@@ -24,9 +24,9 @@ const handleLogin = async () => {
         const userData = userDoc.data();
       const userRole = userDoc.data().role;
         if (userRole === "Citizen") {
-          navigation.navigate('HomePage');
-        } else if (userRole === 'Police') {
-          navigation.navigate('SubPage');
+          navigation.navigate('BottomTabs');
+        } else if (userRole === 'Admin') {
+          navigation.navigate('BottomTabsAdmin');
         } else {
           setError('User not found');
         }
@@ -56,10 +56,11 @@ const handleRegister = () => {
     }
   };
   return (
-    <KeyboardAvoidingView behavio={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-    <View className="flex-1 justify-center bg-white">
-    <Image
+    
+      <KeyboardAvoidingView behavio={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
+       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+         <View className="flex-1 justify-center bg-white">
+     <Image
         className="w-72 h-32 mb-3 items-center justify-center mx-auto"
         source={require('./images/alertado.jpg')}
       />
@@ -92,9 +93,8 @@ const handleRegister = () => {
       
      
       
-    </View>
-    </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+           </View>
+         </TouchableWithoutFeedback>
+       </KeyboardAvoidingView>
   );
 };
-export default LoginForm;

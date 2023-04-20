@@ -5,13 +5,28 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import LoginForm from './Screens/LoginForm'
 import HomePage from './Screens/HomePage'
-import SubPage from './Screens/SubPage'
+import ReportCrime from './Screens/ReportCrime'
+import FileComplaint from './Screens/FileComplaint'
+import ProfilePage from './Screens/ProfilePage'
+import BottomTabs from './Screens/BottomTabs'
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import AdminVerify from './Screens/AdminVerify'
+import BottomTabsAdmin from './Screens/BottomTabsAdmin'
 
 const Stack = createNativeStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator initialRouteName='LoginForm'>
+      <Stack.Screen options={{headerShown: false}}
+        name='BottomTabs'
+        component={BottomTabs}
+        />
+        <Stack.Screen
+         name="BottomTabsAdmin"
+         component={BottomTabsAdmin}
+         options={{ headerShown: false }}
+         />
         <Stack.Screen
          name="LoginForm"
          component={LoginForm}
@@ -25,11 +40,20 @@ export default function App() {
          component={HomePage}
          />
          <Stack.Screen
-         name="SubPage"
-         component={SubPage}
+         name="Profile"
+         component={ProfilePage}
+         />
+         <Stack.Screen
+         name="ReportCrime"
+         component={ReportCrime}
+         />
+         <Stack.Screen
+         name="AdminVerify"
+         component={AdminVerify}
          />
          
       </Stack.Navigator>
+     
     </NavigationContainer>
   )
 }
