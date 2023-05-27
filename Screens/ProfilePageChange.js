@@ -25,7 +25,8 @@ const Profile = () => {
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [newFName, setNewFName] = useState('');
+  const [newLName, setNewLName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -174,9 +175,6 @@ signOut(auth).then(() => {
 const handleVerify = () => {
   navigation.navigate('Citizen Verification');
 };
-const handleEdit = () => {
-  navigation.navigate('Profile PageChange');
-};
 
 
 /*<TouchableOpacity  className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto" onPress={pickImage}>
@@ -188,34 +186,7 @@ const handleEdit = () => {
       </TouchableOpacity>*/ //upload
 return (
   <ScrollView className={`bg-white ${isNameModalOpen || isPhoneModalOpen || isAddressModalOpen || isPasswordModalOpen ||isEmailModalOpen  ? "opacity-30" : "opacity-100"} `}>
-  <SafeAreaView>
-    <View className="flex">
-    <View className="flex flex-row">
-  
-    <Ionicons name="chevron-back" size={27} color="black" />
-
-    <Text className="font-semibold text-l justify-center items-center text-center mx-auto mb-4">My Profile</Text>
-    <View className="mr-3">
-    <TouchableOpacity onPress={handleEdit}>
-    <AntDesign name="edit" size={27} color="black" />
-    </TouchableOpacity>
-    </View>
-    </View>
-    <View className="flex flex-row">
-      
-      {image && <Image className="flex mx-auto mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
-      {!image && userData.profilePicUrl && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.profilePicUrl }} style={{ width: 80, height: 80}} />}
-      {!image && !userData.profilePicUrl && <Image className="flex justify-left ml-8 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
-      
-      <View className="flex ml-4 mt-4 mb-4">
-        <Text className=" text-2xl font-semibold">{userData.Lname}, {userData.Fname}</Text>
-        <Text className=" text-lg  text-red-500">{userData.status}</Text>
-        <TouchableOpacity onPress={handleVerify}>
-        <Text className=" text-sm font-semibold mt-2">Verify your Account</Text>
-        </TouchableOpacity>
-        </View>
-      
-      </View>
+  <SafeAreaView> 
       
       <Text className="mx-auto font-bold text-xl mb-4 ">Personal Information</Text>
       <View className="mx-auto mb-2 ">
@@ -225,7 +196,7 @@ return (
       </View>
       <View className="flex-col">
       <Text className=" text-sm text-stone-500">Email</Text>
-      <Text className=" text-lg ">{userData.email}</Text>
+      <TextInput className=" text-lg " value={newEmail || userData.email} onChangeText={setNewEmail} editable={true}/>
       <View className="border-0.5 w-56 justify-center mx-auto"></View>
 
       </View>
@@ -379,7 +350,6 @@ return (
         <Text className="mx-auto text-base font-semibold">Sign Out</Text>
         </TouchableOpacity>
         </View>
-    </View>
   </SafeAreaView> 
   </ScrollView>
 );

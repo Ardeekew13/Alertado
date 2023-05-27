@@ -1,33 +1,55 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform} from 'react-native';
+import { Alert, View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, ScrollView} from 'react-native';
 import { collection, doc,setDoc,addDoc, getFirestore} from "firebase/firestore"; 
-import { db,authentication } from '../firebaseConfig';
+import { db,authentication,storage} from '../firebaseConfig';
 import {Picker} from '@react-native-picker/picker';
 import {createUserWithEmailAndPassword,getAuth } from 'firebase/auth';
 import firestore  from '@react-native-firebase/firestore';
+import { Entypo, Ionicons, Feather } from '@expo/vector-icons'; 
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigation } from '@react-navigation/native';
 
+const roles = ['Citizen', 'Police','Admin'];
+const barangays = ['Alegria','Bicao','Buenavista','Buenos Aires','Calatrava'];
 
-const roles =['','Citizen', 'Police','Admin'];
 
 const RegistrationForm = () => {
   const [isSignedIn,setIsSignedIn]=useState(false);
-  const [name, setName] = useState('');
+  const [Fname, setFName] = useState('');
+  const [Lname, setLName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole]=useState('');
+  const [address, setAddress]=useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [emailError, setEmailError]= useState('');
   const [passwordError, setPasswordError]= useState('');
   const [roleError, setRoleError]= useState('');
+  const [addressError, setAddressError]= useState('');
   const [nameError, setNameError]= useState('');
+  const [idImage, setidImage] = useState(null);
+  const [phoneError, setPhoneError]= useState('');
+  const [idError, setIdError]= useState('');
+  const [idProofUrl, setIdProofUrl]= useState(null);
+  const [idProofBlob, setIdProofBlob] = useState(null);
 
- 
+  const navigation =useNavigation();
+  
+  
+  const backButton= async () => {
+    navigation.goBack()
+  };
   const handleSubmit = async () => {
+    
     let errorType = null;
     switch (true) {
-      case name.length === 0:
-        errorType = "Name is required";
+      case Fname.length === 0:
+        errorType = "First name is required";
         break;
+        case Lname.length === 0:
+          errorType = "Last name is required";
+          break;
       case !email.includes("@"):
         errorType = "Invalid Email";
         break;
@@ -46,18 +68,35 @@ const RegistrationForm = () => {
       case password !== confirmPassword:
         errorType = "Password does not match";
         break;
+      case phone.length !== 11:
+          errorType = "Phone number must be 11 digits";
+          break;
       case !role:
         errorType = "Role is empty";
-        break;
+        case !role:
+          errorType = "Address cannot be empty";
       default:
         break;
     }
   
     if (errorType) {
       switch (errorType) {
-        case "Name is required":
+        case "First name is required":
           setNameError(errorType);
           break;
+          case "Address cannot be empty":
+            setAddressError(errorType);
+            break;
+           
+          case "Last name is required":
+            setNameError(errorType);
+            break;
+            case "Phone number must be 11 digits":
+              setPhoneError(errorType);
+              break;
+              case "Invalid phone number":
+                setPhoneError(errorType);
+                break;
         case "Invalid Email":
           setEmailError(errorType);
           break;
@@ -87,8 +126,11 @@ const RegistrationForm = () => {
       setPasswordError("");
       setEmailError("");
       setRoleError("");
+      setPhoneError("");
+      setAddressError("");
   
       try {
+        //Firebase auth
         const authentication = getAuth();
         const userCredentials = await createUserWithEmailAndPassword(
           authentication,
@@ -96,66 +138,117 @@ const RegistrationForm = () => {
           password
         );
         const user = userCredentials.user;
-  
+          //Connect to firestore
         const db = getFirestore();
         const usersCollection = collection(db, "User");
         const userDoc = doc(usersCollection, user.uid);
         await setDoc(userDoc, {
           email,
-          name,
+          Fname,
+          Lname,
+          phone,
           password,
           confirmPassword,
           role,
+          idProofUrl, 
+          address,
           status: "Unverified",
         });
-        console.log("User registered with ID:");
+        console.log();
+        Alert.alert(
+          'Registered Successfully!', 
+          'You can now log in to your account', 
+          [    {      text: 'Sign in',      onPress: () => navigation.goBack() }  ],
+          { 
+            containerStyle: { 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              flex:1
+            },
+            contentContainerStyle: { 
+              justifyContent: 'center', 
+              alignItems: 'center' 
+            }
+          }
+        );
       } catch (error) {
-        console.error("Error adding user:", error);
-      }
+        console.log(error);
+      
     }
   };
+}
   return (
+    <ScrollView>
     <KeyboardAvoidingView behavior={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View className="flex-1 justify-center bg-white">
     <Image
-        className="w-72 h-32 mb-3 items-center justify-center mx-auto"
+        className="w-72 h-32 items-center justify-center mx-auto"
         source={require('./images/alertado.jpg')}
       
       />
-    <Text className="text-4xl flex align-left justify-start ml-5 mb-5 font-bold">Register</Text>  
-      <Text className="ml-5 mb-2 text-sm">Name</Text>
+      <Text className="ml-5 mb-2 text-sm  ">First Name</Text>
       <TextInput
-          className="w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
-          placeholder="Enter your Name"
-          value={name}
-          onChangeText={(name)=>{setName(name)}}
+          className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
+          placeholder="Enter your First Name"
+          value={Fname}
+          onChangeText={(Fname)=>{setFName(Fname)}}
         />
         <Text className="mx-auto color-red-500">{nameError} </Text>
+        <Text className="ml-5 mb-2 text-sm  ">Last Name</Text>
+        <TextInput
+          className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto "
+          placeholder="Enter your First Name"
+          value={Lname}
+          onChangeText={(Lname)=>{setLName(Lname)}}
+        />
+        <Text className="mx-auto color-red-500">{nameError} </Text>
+        <Text className="ml-5 mb-2 text-sm  ">Phone Number</Text>
+        <TextInput
+          className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto "
+          placeholder="Enter your Phone number"
+          value={phone}
+          onChangeText={(phone)=>{setPhone(phone)}}
+        />
+        <Text className="mx-auto color-red-500">{phoneError} </Text>
+        <Text className="ml-5 mb-2 text-sm">Select Barangay</Text>
+        <View className="justify-center w-11/12 h-12 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2">
+        <Picker
+        selectedValue={address}
+        onValueChange={(itemValue) => setAddress(itemValue)}
+      >
+      <Picker.Item label="Barangay" value="" />
+        {barangays.map((address)=>(
+          <Picker.Item key={address} label={address} value={address} placeholder="Barangay"/>
+        ))}
+      </Picker>
+      </View>
+        <Text className="mx-auto color-red-500">{addressError} </Text>
         <Text className="ml-5 mb-2 text-sm">Email</Text>
         <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+        className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto"
           placeholder="Enter your Email"
           value={email}
           onChangeText={(email)=>{setEmail(email)}}
         />
         <Text className="mx-auto color-red-500">{emailError} </Text>
         <Text className="ml-5 mb-2 text-sm">Select a role</Text>
-        <View className="justify-center w-11/12 h-12 py-3 rounded-lg bg-gray-100 mx-auto mb-2">
-        
+        <View className="justify-center w-11/12 h-12 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2">
         <Picker
         selectedValue={role}
         onValueChange={(itemValue) => setRole(itemValue)}
       >
+      <Picker.Item label="Role" value="" />
         {roles.map((role)=>(
           <Picker.Item key={role} label={role} value={role}/>
         ))}
       </Picker>
       </View>
+      
       <Text className="mx-auto color-red-500">{roleError} </Text>
-        <Text className="ml-5 mb-2 text-sm">Password</Text>
+        <Text className="ml-5 text-sm">Password</Text>
         <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+        className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
           placeholder="Enter your Password"
           value={password}
           onChangeText={(password)=>{setPassword(password)}}
@@ -164,17 +257,17 @@ const RegistrationForm = () => {
         <Text className="mx-auto color-red-500">{passwordError} </Text>
         <Text className="ml-5 mb-2 text-sm">Confirm Password</Text>
         <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+        className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
           placeholder="Confirm Password"
           value={confirmPassword}
           onChangeText={(confirmPassword)=>{setConfirmPassword(confirmPassword)}}
           secureTextEntry={true}
         />
         <TouchableOpacity
-          className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto"
+          className="w-11/12 mt-4 px-4 py-1 rounded-lg bg-[#E31A1A] items-center mx-auto mb-4"
           onPress={handleSubmit}
         >
-          <Text className="text-white text-lg font-medium mx-auto">Register</Text>
+          <Text className="text-white text-lg font-medium mx-auto mb-2">Register</Text>
         </TouchableOpacity>
       
      
@@ -182,6 +275,7 @@ const RegistrationForm = () => {
     </View>
     </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
+    </ScrollView>
   );
 };
 

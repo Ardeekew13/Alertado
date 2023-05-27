@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button,SafeAreaView} from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button,SafeAreaView, Alert} from 'react-native';
 import { collection,query,where,doc, getDoc} from 'firebase/firestore';
 import {signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { db,authentication } from '../firebaseConfig';
@@ -23,8 +23,20 @@ const handleLogin = async () => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
       const userRole = userDoc.data().role;
+      const userStatus = userDoc.data().status
         if (userRole === "Citizen") {
           navigation.navigate('BottomTabs');
+          if (userStatus==='Unverified'){
+            Alert.alert(
+              'Account is not verified',
+              'Please verify your account before proceeding.',
+              [{text: 'Verify',
+              onPress: ()=>{
+                navigation.navigate('Citizen Verification');
+              }
+              }]
+            )
+          }
         } else if (userRole === 'Admin') {
           navigation.navigate('BottomTabsAdmin');
         } else {
@@ -60,21 +72,23 @@ const handleRegister = () => {
       <KeyboardAvoidingView behavio={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
          <View className="flex-1 justify-center bg-white">
+         <Text className="font-bold ml-8">Welcome
+         </Text>
+         <Text className="ml-8 mt-1">Sign in to continue!</Text>
      <Image
         className="w-72 h-32 mb-3 items-center justify-center mx-auto"
         source={require('./images/alertado.jpg')}
       />
-    <Text className="text-4xl flex align-left justify-start ml-5 mb-5 font-bold">Login</Text>  
         <Text className="ml-5 mb-2 text-sm">Email</Text>
         <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+        className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
           placeholder="Enter your Email"
           onChangeText={(email)=>{setEmail(email)}}
           onBlur={validateInputs}
         />
         <Text className="ml-5 mb-2 text-sm">Password</Text>
         <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+        className="w-11/12 px-4 py-3 rounded-lg  border-2 border-[#E0E0E0] mx-auto mb-2"
           placeholder="Enter your Password"
           onChangeText={(password)=>{setPassword(password)}}
           secureTextEntry={true}
@@ -82,13 +96,13 @@ const handleRegister = () => {
         />
         {error? <Text className="color-red-500 mx-auto mb-5 mt-2">{error}</Text>:null}
         <TouchableOpacity
-          className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto"
+          className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-[#E31A1A] items-center mx-auto"
           onPress={handleLogin}
         >
           <Text className="text-white text-lg font-medium mx-auto">Login</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleRegister}>
-        <Text className="items-center justify-center mx-auto mt-5 text-xl">Don't have an account?<Text className="text-[#0000FF]"> Register</Text></Text>
+        <Text className="items-center justify-center mx-auto mt-5 text-xl text-[#626161]">Don't have an account? <Text className="text-[#E02424] underline">Sign up</Text></Text>
       </TouchableOpacity>
       
      

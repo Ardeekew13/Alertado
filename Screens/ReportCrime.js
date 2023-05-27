@@ -1,25 +1,55 @@
-import { ScrollView, View, Text, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
+import {Alert, ScrollView, View, Text, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
 import React  from 'react'
 import { db,authentication } from '../firebaseConfig';
 import { useState, useEffect } from 'react';
 import firestore  from '@react-native-firebase/firestore';
-import { collection, doc,setDoc,addDoc, getFirestore} from "firebase/firestore"; 
+import { collection, doc,setDoc,addDoc, getFirestore, onSnapshot} from "firebase/firestore"; 
 import DatePicker from 'react-native-modern-datepicker';
 import { MaterialIcons } from '@expo/vector-icons'; 
 import { getToday,getFormatedDate } from 'react-native-modern-datepicker';
 import MapView from 'react-native-maps';
-
-
+import { useNavigation } from '@react-navigation/core';
+import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
+const auth = getAuth();
+let currentUser = null;
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+});
 const ReportCrime =()=>{
+  const [userData, setUserData] = useState(null);
   const [name,setName] =useState('')
   const [message,setMessage] =useState('')
+  const [wanted,setWanted] =useState('')
+  const [complainee,setComplainee] =useState('')
   const [nameError, setNameError]= useState('');
   const [detailsError, setDetailsError]= useState('');
   const [date,setDate]=useState('12/12/2023');
   const [selectedDate, setSelectedDate] = useState('');
   const [open, setOpen]=useState(false);
   const today = new Date();
+  const navigation=useNavigation();
   const startDate = getFormatedDate(today.setDate(today.getDate()), 'YYYY/MM/DD')
+  useEffect(() => {
+    const currentUser = getAuth().currentUser;
+    const db = getFirestore();
+    const userRef = doc(db, 'User', currentUser.uid);
+
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      const data = doc.data();
+      setUserData(data);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  if (!userData) {
+    return <Text>Loading...</Text>;
+  }
+  
+  
+  
+  
+  
   function handleOnPress (){
     setOpen(!open);
   }
@@ -40,10 +70,20 @@ const pressSubmit = async ()=>{
   const db =getFirestore();
   const userDoc =doc(collection(db,'Reports'));
     await setDoc(userDoc,{
+    userId: currentUser.uid,
     name,
     message,
+    date,
+    wanted,
+    complainee,
     });
-    console.log("Submitted");
+    Alert.alert('Verification Successful!', 'This user has been verified.', [
+      {
+        text: 'OK',
+        onPress: () => navigation.goBack(),
+        style: 'cancel'
+      }
+    ], { textAlign: 'center' });
   }catch(error){
     console.error('Error adding user:',error);
   }
@@ -75,12 +115,16 @@ const pressSubmit = async ()=>{
      <Text className="ml-5 mb-2 text-sm">Was the suspect wanted/have or had any charges against him/her</Text>
      <TextInput
     className="border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
-    placeholder='Details of the incident'
+    placeholder='Yes or No, I dont know'
+    value={wanted}
+    onChangeText={(wanted)=>{setWanted(wanted)}}
      />
     <Text className="ml-5 mb-2 text-sm">Complainee</Text>
     <TextInput
     className="border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
     placeholder='Enter the name that is being complained'
+    value={complainee}
+    onChangeText={(complainee)=>{setComplainee(complainee)}}
     />
     <Text className="ml-5 mb-2 text-sm">Date of the incident</Text>
     <TouchableOpacity className="flex-row justify-center  items-start border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
@@ -97,7 +141,7 @@ const pressSubmit = async ()=>{
     <DatePicker
     mode='calendar'
     minimumDate={startDate}
-    selected={date}
+    selected={selectedDate}
     onDateChange={handleChange}
     />
     <TouchableOpacity
@@ -112,7 +156,7 @@ const pressSubmit = async ()=>{
    
      </View>
     <TouchableOpacity
-    className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto"
+    className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto mb-4"
     onPress={pressSubmit}
   >
     <Text className="text-white text-lg font-medium mx-auto">Submit</Text>
