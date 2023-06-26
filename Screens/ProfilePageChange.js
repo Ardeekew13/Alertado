@@ -8,7 +8,7 @@ import *  as ImagePicker from 'expo-image-picker';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} from 'firebase/storage';
 import firebaseConfig from '../firebaseConfig';
-import { AntDesign, Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons'; 
+import { AntDesign, Ionicons, FontAwesome, MaterialIcons, Entypo } from '@expo/vector-icons'; 
 import { BlurView } from '@react-native-community/blur';
 
 
@@ -192,6 +192,32 @@ return (
       <View className="mx-auto mb-2 ">
       <View className="flex-row">
       <View className="justify-center mr-2">
+      <FontAwesome name="user" size={32} color="black" />
+      </View>
+      <View className="flex-col">
+      <Text className=" text-sm text-stone-500">First Name</Text>
+      <TextInput className=" text-lg " value={newFName || userData.Fname} onChangeText={setNewFName} editable={true}/>
+      <View className="border-0.5 w-56 justify-center mx-auto"></View>
+</View>
+</View>
+</View>
+<View className="mx-auto mt-5 mb-2 ">
+<View className="flex-row">
+<View className="justify-center mr-2">
+<Entypo name="user" size={30} color="black" />
+</View>
+<View className="flex-col">
+<Text className=" text-sm text-stone-500">Last Name</Text>
+<TextInput className=" text-lg " value={newLName || userData.Lname} onChangeText={setNewLName} editable={true}/>
+<View className="border-0.5 w-56 justify-center mx-auto"></View>
+
+</View>
+</View>
+</View>
+      
+      <View className="mx-auto mt-5 mb-2 ">
+      <View className="flex-row">
+      <View className="justify-center mr-2">
       <MaterialIcons name="email" size={30} color="black" />
       </View>
       <View className="flex-col">
@@ -228,128 +254,7 @@ return (
       </View>
       </View>
       </View> 
-     
-      <View className="flex justify- mx-auto mt-10 justify-center py-auto ">
-            <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={() => setIsNameModalOpen(true)}>
-              <Text className="mx-auto text-base font-semibold">Change Name</Text>
-              </TouchableOpacity>
 
-            
-            <Modal 
-            visible={isNameModalOpen}
-            transparent={true}
-            animationType='slide'>
-            <View className="flex-1 justify-center ">
-            <View className="bg-white rounded-lg p-4 mx-auto py-auto  justify-center ">
-               <Text className="text-xl font-semibold mb-4 ">Enter your new name</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4 mx-2" value={newName} onChangeText={setNewName} />
-                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={nameChange}>
-                 <Text className="font-semibold item-center mx-auto">Save</Text>
-                   </TouchableOpacity>
-                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsNameModalOpen(false)}>
-                            <Text className="font-semibold mx-auto">Cancel</Text>
-                              </TouchableOpacity>
-                              </View>
-                              </View>
-                              
-                  </Modal>
-                 
-            <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={() => setIsEmailModalOpen(true)}>
-              <Text className="mx-auto text-base font-semibold">Change Email</Text>
-              </TouchableOpacity>
-                   <Modal 
-            visible={isEmailModalOpen}
-            transparent={true}
-            animationType='slide'>
-            <View className="flex-1 justify-center ">
-            <View className="bg-white rounded-lg p-4 mx-auto py-auto  justify-center ">
-               <Text className="text-xl font-semibold mb-4 ">Enter your new Email</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4 mx-2" value={newEmail} onChangeText={setNewEmail} />
-                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={emailChange}>
-                 <Text className="font-semibold item-center mx-auto">Save</Text>
-                   </TouchableOpacity>
-                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsEmailModalOpen(false)}>
-                            <Text className="font-semibold mx-auto">Cancel</Text>
-                              </TouchableOpacity>
-                              </View>
-                              </View>
-                  </Modal>
-                  
-                
-                
-          
-              <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsPhoneModalOpen(true)}>
-              <Text className="mx-auto text-base font-semibold">Change Phone Number</Text>
-            </TouchableOpacity>
-            <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center ">
-            <Modal 
-            visible={isPhoneModalOpen}
-            transparent={true}
-            animationType='slide'>
-            <View className="flex items-center justify-center my-auto w-96 ">
-            <View className="bg-white rounded-lg p-4">
-               <Text className="text-xl font-semibold mb-4">Enter your new Phone Number</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder="+63" value={newPhone} onChangeText={setNewPhone}/>
-                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={phoneChange}>
-                 <Text className="font-semibold ">Save</Text>
-                   </TouchableOpacity>
-                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsPhoneModalOpen(false)}>
-                            <Text className="font-semibold">Cancel</Text>
-                              </TouchableOpacity>
-                              </View>
-                        </View>
-                  </Modal>
-                  </View>
-            <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsAddressModalOpen(true)}>
-            <Text className="mx-auto text-base font-semibold">Change Address</Text>
-          </TouchableOpacity>
-          <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center ">
-            <Modal 
-            visible={isAddressModalOpen}
-            transparent={true}
-            animationType='slide'>
-            <View className="flex items-center justify-center my-auto w-96 ">
-            <View className="bg-white rounded-lg p-4">
-               <Text className="text-xl font-semibold mb-4">Enter your new Address</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder="Barangay, Town, Province" value={newAddress} onChangeText={setNewAddress}/>
-                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={addressChange}>
-                 <Text className="font-semibold ">Save</Text>
-                   </TouchableOpacity>
-                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsAddressModalOpen(false)}>
-                            <Text className="font-semibold">Cancel</Text>
-                              </TouchableOpacity>
-                              </View>
-                        </View>
-                  </Modal>
-                  </View>
-          
-          <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsAddressModalOpen(true)}>
-          <Text className="mx-auto text-base font-semibold">Change Password</Text>
-        </TouchableOpacity>
-        <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center ">
-            <Modal 
-            visible={isPasswordModalOpen}
-            transparent={true}
-            animationType='slide'>
-            <View className="flex items-center justify-center my-auto w-96 ">
-            <View className="bg-white rounded-lg p-4">
-               <Text className="text-xl font-semibold mb-4">Enter your new Address</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4"  value={newPassword} onChangeText={setNewPassword}/>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4"  value={newConfirmPassword} onChangeText={setNewConfirmPassword}/>
-                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={passwordChange}>
-                 <Text className="font-semibold ">Save</Text>
-                   </TouchableOpacity>
-                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsPasswordModalOpen(false)}>
-                            <Text className="font-semibold">Cancel</Text>
-                              </TouchableOpacity>
-                              </View>
-                        </View>
-                  </Modal>
-                  </View>
-        <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={Signout}>
-        <Text className="mx-auto text-base font-semibold">Sign Out</Text>
-        </TouchableOpacity>
-        </View>
   </SafeAreaView> 
   </ScrollView>
 );

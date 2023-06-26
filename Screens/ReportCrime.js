@@ -3,29 +3,71 @@ import React  from 'react'
 import { db,authentication } from '../firebaseConfig';
 import { useState, useEffect } from 'react';
 import firestore  from '@react-native-firebase/firestore';
-import { collection, doc,setDoc,addDoc, getFirestore, onSnapshot} from "firebase/firestore"; 
+import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, increment, updateDoc} from 'firebase/firestore';
 import DatePicker from 'react-native-modern-datepicker';
 import { MaterialIcons } from '@expo/vector-icons'; 
 import { getToday,getFormatedDate } from 'react-native-modern-datepicker';
 import MapView from 'react-native-maps';
 import { useNavigation } from '@react-navigation/core';
 import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
+import {Picker} from '@react-native-picker/picker';
+
+const barangays = [
+  "Alegria",
+  "Bicao",
+  "Buenavista",
+  "Buenos Aires",
+  "Calatrava",
+  "El Progreso",
+  "El Salvador",
+  "Guadalupe",
+  "Katipunan",
+  "La Libertad",
+  "La Paz",
+  "La Salvacion",
+  "La Victoria",
+  "Matin-ao",
+  "Montehermoso",
+  "Montesuerte",
+  "Montesunting",
+  "Montevideo",
+  "Nueva Fuerza",
+  "Nueva Vida Este",
+  "Nueva Vida Norte",
+  "Nueva Vida Sur",
+  "Poblacion Norte",
+  "Poblacion Sur",
+  "Tambo-an",
+  "Vallehermoso",
+  "Villaflor",
+  "Villafuerte",
+  "Villacayo",
+];
+
+
+
 const auth = getAuth();
 let currentUser = null;
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
 });
+
+
+
 const ReportCrime =()=>{
   const [userData, setUserData] = useState(null);
   const [name,setName] =useState('')
+  const [barangay,setBarangay] =useState('')
+  const [street,setStreet] =useState('')
   const [message,setMessage] =useState('')
   const [wanted,setWanted] =useState('')
   const [complainee,setComplainee] =useState('')
   const [nameError, setNameError]= useState('');
   const [detailsError, setDetailsError]= useState('');
-  const [date,setDate]=useState('12/12/2023');
+  const [date,setDate]=useState('2023/12/12');
   const [selectedDate, setSelectedDate] = useState('');
   const [open, setOpen]=useState(false);
+  const [barangayCounts, setBarangayCounts] = useState({}); 
   const today = new Date();
   const navigation=useNavigation();
   const startDate = getFormatedDate(today.setDate(today.getDate()), 'YYYY/MM/DD')
@@ -66,9 +108,19 @@ const pressSubmit = async ()=>{
   else if(message.length<10){
     setDetailsError('Cannot be less than to 10 characters');
   }
-  try{
-  const db =getFirestore();
-  const userDoc =doc(collection(db,'Reports'));
+  try {
+    const db = getFirestore();
+    const userDoc = doc(collection(db, 'Reports'));
+
+    // Get the current transaction ID from Firestore
+    const transactionNumberDoc = doc(db, 'Transaction', 'transactionId');
+    const transactionSnapshot = await getDoc(transactionNumberDoc);
+    let transactionId = '00001'; // Default value if no transaction ID exists
+
+    if (transactionSnapshot.exists()) {
+      const { currentNumber } = transactionSnapshot.data();
+      transactionId = (currentNumber + 1).toString().padStart(5, '0');
+    }
     await setDoc(userDoc,{
     userId: currentUser.uid,
     name,
@@ -76,35 +128,62 @@ const pressSubmit = async ()=>{
     date,
     wanted,
     complainee,
+    barangay,
+    street,
+    type: 'Crime',
+    status: 'Pending',
+    transactionId,
     });
-    Alert.alert('Verification Successful!', 'This user has been verified.', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-        style: 'cancel'
-      }
-    ], { textAlign: 'center' });
-  }catch(error){
-    console.error('Error adding user:',error);
+    const barangayDocRef = doc(db, 'barangayCounts', barangay);
+const barangaySnapshot = await getDoc(barangayDocRef);
+const currentCount = barangaySnapshot.exists() ? barangaySnapshot.data().count : 0;
+
+// Update the report count for the selected barangay
+await setDoc(barangayDocRef, {
+  count: currentCount + 1,
+});
+
+// Update the local state of barangay counts
+setBarangayCounts(prevCounts => ({
+  ...prevCounts,
+  [barangay]: (prevCounts[barangay] || 0) + 1,
+}));
+    await setDoc(transactionNumberDoc, { currentNumber: increment(1) });
+    
+      Alert.alert('Report Successful!', 'Your report is under review.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+          style: 'cancel',
+        },
+      ], { textAlign: 'center' });
+    } catch (error) {
+      console.error('Error adding user:', error);
+      Alert.alert('Error', 'An error occurred while adding the user.', [
+        {
+          text: 'OK',
+          onPress: () => {}, // Optional: Handle error dismissal
+        },
+      ], { textAlign: 'center' });
+    }
   }
-};
   return (
     <ScrollView>
     <SafeAreaView className="flex-1  bg-white">
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View className="mt-16">
-    <Text className="font-bold text-xl mx-auto">File Report Form</Text>
+    <Text className="font-bold text-xl mx-auto">Report Crime Form</Text>
     <Text className="mx-auto italic mb-4 w-44 text-center">To report an incident, Please provide the following information</Text>
     <Text className="ml-5 mb-2 text-sm">Name</Text>
     <TextInput
-    className="border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+    className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
     placeholder='Enter your name'
     value={name}
     onChangeText={(name)=>{setName(name)}}
      />
     <Text className="ml-5 mb-2 text-sm">Description</Text>
     <TextInput
-    className="border-2 w-11/12 px-4 rounded-lg mb-2 bg-gray-100 mx-auto h-32 text-start"
+    className="border-0.5 w-11/12 px-4 rounded-lg mb-2 bg-gray-100 mx-auto h-32 text-start"
     placeholder='Details of the incident'
     editable
     multiline
@@ -114,20 +193,20 @@ const pressSubmit = async ()=>{
      />
      <Text className="ml-5 mb-2 text-sm">Was the suspect wanted/have or had any charges against him/her</Text>
      <TextInput
-    className="border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+    className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
     placeholder='Yes or No, I dont know'
     value={wanted}
     onChangeText={(wanted)=>{setWanted(wanted)}}
      />
     <Text className="ml-5 mb-2 text-sm">Complainee</Text>
     <TextInput
-    className="border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+    className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
     placeholder='Enter the name that is being complained'
     value={complainee}
     onChangeText={(complainee)=>{setComplainee(complainee)}}
     />
     <Text className="ml-5 mb-2 text-sm">Date of the incident</Text>
-    <TouchableOpacity className="flex-row justify-center  items-start border-2 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+    <TouchableOpacity className="flex-row justify-center  items-start border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
     onPress={handleOnPress}>
     <MaterialIcons  name="date-range" size={24} color="black" />
     <Text className="text-center mx-auto text-xl justify-center">{date}</Text>
@@ -151,10 +230,34 @@ const pressSubmit = async ()=>{
    
     </View>
     </Modal>
+    <View className="border-t-0.5 mx-4 mt-3">
+    </View>
     <View>
-    <Text>Address</Text>
-   
+    <Text className="text-lg font-bold ml-5 my-2">Address Information</Text>
+    <View className="border-b-0.5 mx-4">
+    </View>
      </View>
+     <View className="mt-2">
+     <Text className="ml-5 mb-2 text-sm">Street</Text>
+    <TextInput
+    className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
+    placeholder='Enter your street'
+    value={street}
+    onChangeText={(street)=>{setStreet(street)}}
+     />
+     </View>
+     <Text className="ml-5 mb-2 text-sm">Select Barangay</Text>
+     <View className="justify-center w-11/12 h-12 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2">
+     <Picker
+     selectedValue={barangay}
+     onValueChange={(itemValue) => setBarangay(itemValue)}
+   >
+   <Picker.Item label="Barangay" value="" />
+     {barangays.map((barangay)=>(
+       <Picker.Item key={barangay} label={barangay} value={barangay} placeholder="Barangay"/>
+     ))}
+   </Picker>
+   </View>
     <TouchableOpacity
     className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto mb-4"
     onPress={pressSubmit}

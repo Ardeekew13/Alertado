@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, ImageBackground, ScrollView} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ImageBackground } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth, onAuthStateChanged } from '@firebase/auth';
-import { collection, query, where, onSnapshot, getFirestore, updateDoc } from '@firebase/firestore';
-import { formatDistanceToNow } from 'date-fns';
+import { collection, query, where, onSnapshot, getFirestore } from '@firebase/firestore';
 
-const ViewReports = () => {
+
+const ViewComplaints = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [reports, setReports] = useState([]);
+  const [complaints, setComplaints] = useState([]);
 
   const navigation = useNavigation();
 
-  const fetchUserReports = (userId) => {
+  const fetchUserComplaints = (userId) => {
     const db = getFirestore();
-    const reportsRef = collection(db, 'Reports');
-    const userReportsQuery = query(reportsRef, where('userId', '==', userId));
+    const complaintsRef = collection(db, 'Complaints');
+    const userComplaintsQuery = query(complaintsRef, where('userId', '==', userId));
 
-    const unsubscribeReports = onSnapshot(userReportsQuery, (snapshot) => {
-      const reportsData = snapshot.docs.map((doc) => doc.data());
-      setReports(reportsData);
+    const unsubscribeReports = onSnapshot(userComplaintsQuery, (snapshot) => {
+      const complaintsData = snapshot.docs.map((doc) => doc.data());
+      setComplaints(complaintsData);
     });
 
     return () => {
-      unsubscribeReports();
+      unsubscribeComplaints();
     };
   };
 
@@ -33,10 +33,10 @@ const ViewReports = () => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserData(user);
-        fetchUserReports(user.uid);
+        fetchUserComplaints(user.uid);
       } else {
         setUserData(null);
-        setReports([]);
+        setComplaints([]);
       }
     });
 
@@ -56,18 +56,17 @@ const ViewReports = () => {
   }
 
   const handleButton = () => {
-    navigation.navigate('Report Crime');
+    navigation.navigate('File Complaint');
   };
-  const handleClick = (report) => {
-    navigation.navigate('View Report Details',{report});
+  const handleClick = (complaint) => {
+    navigation.navigate('View Complaint Details',{complaint});
   };
 
 
 
   return (
- 
     <View className="flex-1">
-    <View style={{ position: 'absolute', bottom: 20, right: 20, zIndex:1 }}>
+    <View className="absolute right-4 bottom-4 justify-center items-center">
       <TouchableOpacity
         style={{
           backgroundColor: '#EF4444',
@@ -90,23 +89,23 @@ const ViewReports = () => {
             <Ionicons name="ios-close-outline" size={24} color="black" />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleButton}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Report Crime</Text>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>File Complaint</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
 
-  {reports.map((report) => (
-    <View key={report.id} className="flex flex-col mt-5">
-      <TouchableOpacity onPress={() => handleClick(report)}>
+  {complaints.map((complaint) => (
+    <View key={complaint.id} className="flex flex-col mt-5">
+      <TouchableOpacity onPress={() => handleClick(complaint)}>
         <View className="bg-white h-28 mx-4 rounded-lg">
-          <Text className="text-lg font-bold ml-2">{report.name}</Text>
-          <Text className="ml-2">{report.date}</Text>
+          <Text className="text-lg font-bold ml-2">{complaint.name}</Text>
+          <Text className="ml-2">{complaint.date}</Text>
           <View>
             <Text className="ml-2">
-              {report.barangay}, {report.street}
+              {complaint.barangay}, {complaint.street}
             </Text>
-            <Text className="text-lg ml-2 text-red-500">#REPORT_{report.transactionId}</Text>
+            <Text className="text-lg ml-2 text-red-500">#Complaints_{complaint.transactionId}</Text>
           </View>
           <Text
             style={{
@@ -121,7 +120,6 @@ const ViewReports = () => {
             }}
           >
             {report.status}
-            
           </Text>
         </View>
       </TouchableOpacity>
@@ -131,4 +129,4 @@ const ViewReports = () => {
   );
 };
 
-export default ViewReports;
+export default ViewComplaints;

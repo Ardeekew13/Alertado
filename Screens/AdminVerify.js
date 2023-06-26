@@ -43,7 +43,7 @@ const AdminVerify = () => {
                 <ImageBackground className="list-item mb-2 h-28 mx-2" source={require('./images/banner.png')}>
                   <View className="flex-1 flex-row">
                     <Image className="w-20 h-20 mx-4 my-4 rounded-full" source={{ uri: user.selfiePicture }} />
-                    <Text className="text-lg text-white mt-10 h-10 text-center justify-center mx-auto">{user.name}</Text>
+                    <Text className="text-lg text-white mt-10 h-10 text-center justify-center mx-auto">{user.Fname}</Text>
                     <Text className="text-lg text-white mt-10 h-10 text-center justify-center mx-auto">{user.role}</Text>
                   </View>
                 </ImageBackground>

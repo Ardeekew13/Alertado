@@ -12,6 +12,7 @@ import AdminVerify from './AdminVerify';
 import { createStackNavigator } from '@react-navigation/stack';
 import ViewReports from './ViewReports';
 import SOS from './SOS';
+import ViewComplaints  from './ViewComplaints';
 
 
 
@@ -62,10 +63,10 @@ function BottomTabs(){
 
 
 <Tab.Screen
-  name="File Complaint"
-  component={FileComplaint}
+  name="View Complaints"
+  component={ViewComplaints}
   options={{
-    tabBarLabel: 'File Complaint',
+    tabBarLabel: 'ViewComplaints',
     tabBarIcon: ({ color, size }) => (
       <Octicons name="report" size={22} color={color} />
     ),

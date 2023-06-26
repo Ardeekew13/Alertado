@@ -17,6 +17,7 @@ import AdminVerifyProof from './Screens/AdminVerifyProof'
 import ProfilePageChange from './Screens/ProfilePageChange'
 import ViewReports from './Screens/ViewReports'
 import SOS from './Screens/SOS'
+import ViewReportDetails from './Screens/ViewReportDetails'
 
 const Stack = createNativeStackNavigator();
 export default function App() {
@@ -89,6 +90,18 @@ export default function App() {
         }}
          />
          <Stack.Screen
+         name="View Report Details"
+         component={ViewReportDetails}
+         options={{
+          title: 'View Report Details',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
          name="Profile"
          component={ProfilePage}
          />
@@ -97,6 +110,18 @@ export default function App() {
          component={ReportCrime}
          options={{
           title: 'Report Crime',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="File Complaint"
+         component={FileComplaint}
+         options={{
+          title: 'File Complaint',
           headerStyle: {
             backgroundColor: '#FE0000',
           },
