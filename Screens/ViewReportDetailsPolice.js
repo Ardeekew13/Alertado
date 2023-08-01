@@ -9,7 +9,7 @@ import firebaseConfig, { db } from '../firebaseConfig';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 const mapCustomStyle = [ { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] }, { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] }, { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] }, { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] }, { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] }, { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] } ]
-const ViewReportDetails = ({ route }) => {
+const ViewReportDetailsPolice = ({ route }) => {
   const { report } = route.params;
   const reportId = report.id;
   const [mapReady, setMapReady] = useState(false);
@@ -123,6 +123,18 @@ const ViewReportDetails = ({ route }) => {
           <Text>No Police Feedback available</Text>
           <View style={styles.separator} />
         </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+    <TouchableOpacity>
+        <View className="bg-cyan-500 p-2 rounded-sm">
+            <Text className="text-white">Change Status</Text>
+        </View>
+    </TouchableOpacity>
+    <TouchableOpacity>
+        <View className="bg-slate-800 p-2 rounded-sm">
+            <Text className="text-white">Give Feedback</Text>
+        </View>
+    </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -200,4 +212,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ViewReportDetails;
+export default ViewReportDetailsPolice;

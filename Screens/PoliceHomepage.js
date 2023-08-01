@@ -47,7 +47,7 @@ let currentUser = null;
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
 });
-const AdminHomePage = ()=>{
+const PoliceHomepage = ()=>{
   const [userData, setUserData] = useState(null);
   const [barangayCounts, setBarangayCounts] = useState({});
   const navigation=useNavigation()
@@ -98,7 +98,7 @@ const AdminHomePage = ()=>{
       <SafeAreaView className="flex-1">
       <View className="flex-row justify-start items-center">
         <Text className="mx-4 text-lg font-light">Hello,</Text>
-        <Text className="text-[#EF4444] font-bold text-lg">System Admin</Text>
+        <Text className="text-[#EF4444] font-bold text-lg">{userData.Fname} {userData.Lname}</Text>
       </View>
       <View className="mx-4">
            <Text className="text-[#817E7E] text-md">Check your activities in this dashboard</Text>
@@ -137,4 +137,4 @@ const AdminHomePage = ()=>{
     
   )
 };
-export default AdminHomePage;
+export default PoliceHomepage;

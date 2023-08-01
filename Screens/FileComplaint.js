@@ -1,17 +1,17 @@
-import {Alert, ScrollView, View, Text, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
+import {Alert, ScrollView, View, Text,StyleSheet, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
 import React  from 'react'
 import { db,authentication } from '../firebaseConfig';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import firestore  from '@react-native-firebase/firestore';
 import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, increment } from 'firebase/firestore';
 import DatePicker from 'react-native-modern-datepicker';
 import { MaterialIcons } from '@expo/vector-icons'; 
 import { getToday,getFormatedDate } from 'react-native-modern-datepicker';
-import MapView from 'react-native-maps';
+import MapView, { Marker, Circle } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/core';
 import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
 import {Picker} from '@react-native-picker/picker';
-
+import * as Location from 'expo-location';
 const barangays = ['Alegria','Bicao','Buenavista','Buenos Aires','Calatrava'];
 
 
@@ -40,72 +40,116 @@ const FileComplaint =()=>{
   const today = new Date();
   const navigation=useNavigation();
   const startDate = getFormatedDate(today.setDate(today.getDate()), 'YYYY/MM/DD')
+  const [initialRegion, setInitialRegion] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const mapRef = useRef(null);
+  const userMovedMap = useRef(false);
+  const [loading, setLoading] = useState(false);
+  
   useEffect(() => {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-    const userRef = doc(db, 'User', currentUser.uid);
-
-    const unsubscribe = onSnapshot(userRef, (doc) => {
-      const data = doc.data();
-      setUserData(data);
-    });
-
-    return unsubscribe;
+    const fetchData = async () => {
+      const currentUser = getAuth().currentUser;
+      const db = getFirestore();
+      const userRef = doc(db, 'User', currentUser.uid);
+  
+      const unsubscribe = onSnapshot(userRef, (doc) => {
+        const data = doc.data();
+        setUserData(data);
+      });
+  
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.error('Permission to access location was denied');
+          return;
+        }
+  
+        const location = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = location.coords;
+  
+        setInitialRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+        setMarkerPosition({ latitude, longitude });
+        setUserLocation({ latitude, longitude });
+      } catch (error) {
+        console.error('Error getting current location', error);
+      }
+  
+      return unsubscribe;
+    };
+  
+    fetchData();
   }, []);
-
-  if (!userData) {
-    return <Text>Loading...</Text>;
-  }
   
   
   
-  
-  
+  const onRegionChange = (region) => {
+    if (!userMovedMap.current) {
+      const { latitude, longitude } = markerPosition;
+      setMarkerPosition({ latitude: region.latitude, longitude: region.longitude });
+    }
+  };
   function handleOnPress (){
     setOpen(!open);
   }
   function handleChange (propDate){
     setDate(propDate);
   }
-const pressSubmit = async ()=>{
-  if(name.length===0){
-    setNameError('Name is required');
-  }
-  else if(message.length===0){
-    setDetailsError('Cannot be empty');
-  }
-  else if(message.length<10){
-    setDetailsError('Cannot be less than to 10 characters');
-  }
-  try {
-    const db = getFirestore();
-    const userDoc = doc(collection(db, 'Complaints'));
-
-    // Get the current transaction ID from Firestore
-    const transactionNumberDoc = doc(db, 'Transactions', 'transactionId');
-    const transactionSnapshot = await getDoc(transactionNumberDoc);
-    let transactionId = '00001'; // Default value if no transaction ID exists
-
-    if (transactionSnapshot.exists()) {
-      const { currentNumber } = transactionSnapshot.data();
-      transactionId = (currentNumber + 1).toString().padStart(5, '0');
-    }
-    await setDoc(userDoc,{
-    userId: currentUser.uid,
-    name,
-    message,
-    date,
-    wanted,
-    complainee,
-    barangay,
-    street,
-    type: 'Complaints',
-    status: 'Pending',
-    transactionId,
-    });
-    await setDoc(transactionNumberDoc, { currentNumber: increment(1) });
-
-      Alert.alert('Verification Successful!', 'This user has been verified.', [
+  const pressSubmit = async () => {
+    if (name.length === 0) {
+      setNameError('Name is required');
+    } else if (message.length === 0) {
+      setDetailsError('Cannot be empty');
+    } else if (message.length < 10) {
+      setDetailsError('Cannot be less than 10 characters');
+    } else if (markerPosition === null) {
+      Alert.alert('Location not selected', 'Please select a location on the map');
+    } 
+      try {
+       
+  
+        const db = getFirestore();
+        const userDoc = doc(collection(db, 'Complaints'));
+  
+        // Get the current transaction ID from Firestore
+        const transactionNumberDoc = doc(db, 'TransactionComp', 'transactionCompId');
+        const transactionSnapshot = await getDoc(transactionNumberDoc);
+        let transactionCompId = '00001'; // Default value if no transaction ID exists
+  
+        if (transactionSnapshot.exists()) {
+          const { currentNumber } = transactionSnapshot.data();
+          transactionCompId = (currentNumber + 1).toString().padStart(5, '0');
+        }
+  
+        const location = {
+          latitude: markerPosition.latitude,
+          longitude: markerPosition.longitude,
+        };
+  
+        await setDoc(userDoc, {
+          userId: currentUser.uid,
+          name,
+          message,
+          date,
+          wanted,
+          complainee,
+          barangay,
+          street,
+          type: 'Complaints',
+          status: 'Pending',
+          transactionCompId,
+          location,
+        });
+    const updatedTransactionNumber = transactionSnapshot.exists() ? transactionSnapshot.data().currentNumber + 1 : 1;
+    const updatedTransactionNumberDoc = doc(db, 'TransactionsComp', 'transactionCompId');
+    await setDoc(updatedTransactionNumberDoc, { currentNumber: updatedTransactionNumber });
+    setLoading(false); // Set loading state to false
+      Alert.alert('Complaint Successful!', 'Your complaint is under review.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
@@ -114,14 +158,38 @@ const pressSubmit = async ()=>{
       ], { textAlign: 'center' });
     } catch (error) {
       console.error('Error adding user:', error);
-      Alert.alert('Error', 'An error occurred while adding the user.', [
+      Alert.alert('Error', 'An error occurred while filing the complaint.', [
         {
           text: 'OK',
           onPress: () => {}, // Optional: Handle error dismissal
         },
       ], { textAlign: 'center' });
+      setLoading(false); 
     }
-  }
+  
+};
+const onMarkerDragStart = () => {
+  // Set the userMovedMap flag to true when the marker drag starts
+  userMovedMap.current = true;
+};
+
+const onMarkerDragEnd = (e) => {
+  const { latitude, longitude } = e.nativeEvent.coordinate;
+  setMarkerPosition({ latitude, longitude });
+  userMovedMap.current = false;
+};
+
+const onMapPanDrag = () => {
+userMovedMap.current = true;
+};
+const onUserLocationChange = (location) => {
+const { latitude, longitude } = location.coords;
+setUserLocation({ latitude, longitude });
+
+if (!userMovedMap.current) {
+  setMarkerPosition({ latitude, longitude });
+}
+};
   return (
     <ScrollView>
     <SafeAreaView className="flex-1  bg-white">
@@ -213,12 +281,41 @@ const pressSubmit = async ()=>{
      ))}
    </Picker>
    </View>
-    <TouchableOpacity
-    className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto mb-4"
-    onPress={pressSubmit}
-  >
+   {initialRegion ? (
+    <MapView
+          style={styles.map}
+          onRegionChange={onRegionChange}
+          initialRegion={initialRegion}
+          ref={mapRef}
+          onPanDrag={onMapPanDrag}
+        >
+          {markerPosition && (
+            <Marker
+              coordinate={markerPosition}
+              draggable
+              onDragEnd={onMarkerDragEnd}
+            />
+          )}
+          {userLocation && (
+            <Circle
+              center={userLocation}
+              radius={200}
+              fillColor="rgba(0, 128, 255, 0.2)"
+              strokeColor="rgba(0, 128, 255, 0.5)"
+            />
+      )}
+    </MapView>
+  ) : (
+    <Text>Loading...</Text>
+  )}
+  <TouchableOpacity
+  className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto mb-4"
+  onPress={pressSubmit}
+  disabled={loading} // Disable the button while loading is true
+>
     <Text className="text-white text-lg font-medium mx-auto">Submit</Text>
-  </TouchableOpacity>
+
+</TouchableOpacity>
 
     </View>
     </TouchableWithoutFeedback>
@@ -226,4 +323,14 @@ const pressSubmit = async ()=>{
     </ScrollView>
   )
 };
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+    marginHorizontal: 20,
+    height:250,
+  },
+});
 export default FileComplaint;

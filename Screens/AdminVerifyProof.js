@@ -26,26 +26,37 @@ const AdminVerifyProof = ({ route }) => {
     return (
       <SafeAreaView>
         <ScrollView>
-          <View className="mb-2 items-center justify-center">
-            <Image className="w-[150] h-[150]" source={{ uri: user.selfiePicture }} />
-            <Text className="text-2xl font-bold mt-4">{user.name}</Text>
-            <Text className="text-l mt-2">{user.role}</Text>
-            <Text className="text-l mt-2">{user.email}</Text>
-            <Text className="text-l mt-2">{user.status}</Text>
-            <Text className="text-xl font-bold mt-4">Proof of Identity</Text>
-            <Text className="text-xl font-bold mt-4">ID</Text>
-            <Image className="w-[200] h-[200]" source={{ uri: user.idPicture }} />
-            <Text className="text-xl font-bold mt-4">Selfie</Text>
-            <Image className="w-[200] h-[200]" source={{ uri: user.selfiePicture }} />
-            <View className="flex-row mt-6">
-              <TouchableOpacity className="text-center justify-end mr-20" onPress={() => handleCheckUser(user.id)} >
-                <AntDesign name="checkcircle" size={40} color="green" />
-              </TouchableOpacity>
-              <TouchableOpacity className="text-center justify-end">
-                <AntDesign name="closecircle" size={40} color="red" />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Text className="text-4xl font-bold text-center">Profile</Text>
+        <View className="bg-white m-4 flex items-center justify-center rounded-md">
+        <View style={{ borderColor: 'gray'}} className="border rounded-full mt-2">
+          <Image className="m-2 w-[150] h-[150] rounded-full" source={{ uri: user.selfiePicture }} />
+        </View>
+          <Text className="text-2xl font-bold">{user.Lname}, {user.Fname}</Text>
+          <Text className="text-l">{user.role}</Text>
+          <Text className="mb-2 font-bold text-l">email: {user.email}</Text>
+        </View>
+        <View className="border-0.5 mx-5"></View>
+          <Text className="mx-5 text-xl text-center">Proof of Identity</Text>
+        <View className="border-0.5 mx-5"></View>
+        <View className="flex-row items-center justify-center">
+        <View className="m-4">
+          <Image className="w-[120] h-[120]" source={{ uri: user.idPicture }} />
+          <Text className="text-xl font-bold mx-auto">ID</Text>
+        </View>
+        <View>
+          <Image className="w-[120] h-[120]" source={{ uri: user.selfiePicture }} />
+          <Text className="text-xl font-bold mx-auto">Selfie</Text>
+        </View>
+        </View>
+        <View className="flex-row items-center justify-center m-4">
+        <TouchableOpacity className="text-center justify-end mr-20" onPress={() => handleCheckUser(user.id)}>
+          <AntDesign name="checkcircle" size={40} color="green" />
+        </TouchableOpacity>
+        <TouchableOpacity className="text-center justify-end">
+          <AntDesign name="closecircle" size={40} color="red" />
+        </TouchableOpacity>
+        </View>
+
         </ScrollView>
       </SafeAreaView>
     );

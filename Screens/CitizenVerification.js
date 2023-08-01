@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, Image, Alert, TouchableOpacity} from 'react-native';
+import { View, Text, Image, Alert, TouchableOpacity } from 'react-native';
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, doc, updateDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as ImagePicker from 'expo-image-picker';
 import { launchImageLibraryAsync } from 'expo-image-picker';
-import { db,authentication,storage} from '../firebaseConfig';
+import { db, authentication, storage } from '../firebaseConfig';
 import { useNavigation } from '@react-navigation/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Entypo, Ionicons } from '@expo/vector-icons'; 
@@ -16,8 +16,8 @@ const CitizenVerification = () => {
   const [selfieImage, setselfieImage] = useState(null);
   const [user, setUser] = useState(null);
   const [Loading, setLoading] = useState(false);
-  
-  const navigation=useNavigation();
+
+  const navigation = useNavigation();
   useEffect(() => {
     const unsubscribe = authentication.onAuthStateChanged((user) => {
       setUser(user);
@@ -32,14 +32,14 @@ const CitizenVerification = () => {
       quality: 1,
     });
 
-    if (!result.canceled) {
+    if (!result.cancelled) {
       setidImage(result.assets[0].uri);
     }
   };
-  const backButton= async () => {
-    navigation.goBack()
-  };
 
+  const backButton = async () => {
+    navigation.goBack();
+  };
 
   const handleCameraPress = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -50,11 +50,12 @@ const CitizenVerification = () => {
         quality: 1,
       });
 
-      if (!result.canceled) {
+      if (!result.cancelled) {
         setselfieImage(result.assets[0].uri);
       }
     }
   };
+
   const handleSelfieImagePick = async () => {
     const result = await launchImageLibraryAsync({
       mediaTypes: 'Images',
@@ -62,15 +63,17 @@ const CitizenVerification = () => {
       quality: 1,
     });
 
-    if (!result.canceled) {
+    if (!result.cancelled) {
       setselfieImage(result.assets[0].uri);
     }
   };
+
   const uriToBlob = async (uri) => {
     const response = await fetch(uri);
     const blob = await response.blob();
     return blob;
   };
+
   const handleSubmit = async () => {
     if (!idImage || !selfieImage) {
       Alert.alert('Please upload both images.');
@@ -101,25 +104,31 @@ const CitizenVerification = () => {
       await updateDoc(userDoc, {
         idPicture: idUrl,
         selfiePicture: selfieUrl,
-        status: "Pending", 
+        status: "Pending",
       });
 
       Alert.alert(
-        'Submitted Successfully!', 
-        'You have sent your proof of identity', 
-        [    {      text: 'OK',     onPress: ()=>{
-          navigation.navigate({HomePage});
-        },      style: 'cancel'    }  ],
-        { 
-          containerStyle: { 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            flex:1
+        'Submitted Successfully!',
+        'You have sent your proof of identity',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('HomePage');
+            },
+            style: 'cancel',
           },
-          contentContainerStyle: { 
-            justifyContent: 'center', 
-            alignItems: 'center' 
-          }
+        ],
+        {
+          containerStyle: {
+            justifyContent: 'center',
+            alignItems: 'center',
+            flex: 1,
+          },
+          contentContainerStyle: {
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
         }
       );
     } catch (error) {
@@ -129,61 +138,63 @@ const CitizenVerification = () => {
 
     setLoading(false);
   };
+
   return (
-    <SafeAreaView>
-    <View className="flex">
-    <View className="flex-row justify-between ml-2 items-center">
-    <TouchableOpacity onPress={backButton}>
-    <Ionicons name="chevron-back-outline" size={30} color="black" />
-    </TouchableOpacity>
-    <Text className="justify-center font-bold items-center mx-auto text-xl  mb-4">Verify your account</Text>
-    </View>
-    <Text className="ml-4 mb-2">
-          Identification Card
-      </Text>
-      <TouchableOpacity onPress={handleIdImagePick} >
-      <View className="border-2 rounded-sm border-slate-500 h-60 mb-4 justify-center items-center mx-5">
-  {idImage ? (
-    <Image source={{ uri: idImage }} style={{ width: 250, height: 220 }} />
-  ) : (
-    <>
-      <Entypo name="upload" size={24} color="#DC2626" />
-      <Text className="text-rose-500 font-semibold">
-        Upload a picture of your Identification Card 
-      </Text>
-    </>
-  )}
-</View>
-</TouchableOpacity>
-      <Text className="ml-4 mb-2">
-          Selfie Picture
-      </Text>
-      <TouchableOpacity onPress={handleSelfieImagePick}>
-  <View className="border-2 rounded-sm border-slate-500 h-60 mb-2 justify-center items-center mx-5">   
-    {idImage ? (
-      <Image source={{ uri: selfieImage }} style={{ width: 250, height: 220 }} />
-    ) : (
-      <>
-        <Entypo name="upload" size={24} color="#DC2626" />
-        <Text className="text-rose-500 font-semibold"  >
-          Upload a picture of your Identification Card 
-        </Text>
-      </>
-    )}
-  </View>
-</TouchableOpacity>
-      <View className="flex flex-row w-screen items-center justify-center">
-      <TouchableOpacity onPress={handleCameraPress} className="bg-[#DC2626] w-32 h-10 justify-center items-center mx-10"><Text className="text-lg color-white">Take a Photo</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginLeft: 2, alignItems: 'center' }}>
+        <TouchableOpacity onPress={backButton}>
+          <Ionicons name="chevron-back-outline" size={30} color="black" />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 20, marginBottom: 4 }}>Verify your account</Text>
+        </View>
       </View>
-      <View className="mt-16 items-center justify-center ">
-      <TouchableOpacity className="bg-[#DC2626]  w-11/12 h-10 justify-center items-center mx-10" onPress={handleSubmit}>
-      <Text>
-      Submit
-      </Text>
-      </TouchableOpacity>
+
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ marginLeft: 4, marginBottom: 2 }}>Identification Card</Text>
+          <TouchableOpacity onPress={handleIdImagePick}>
+            <View style={{ borderWidth: 2, borderRadius: 4, borderColor: 'slategray', height: 220, justifyContent: 'center', alignItems: 'center', marginLeft: 5 }}>
+              {idImage ? (
+                <Image source={{ uri: idImage }} style={{ width: 250, height: 220 }} />
+              ) : (
+                <>
+                  <Entypo name="upload" size={24} color="#DC2626" />
+                  <Text style={{ color: 'red', fontWeight: 'bold' }}>Upload a picture of your Identification Card</Text>
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ marginLeft: 4, marginBottom: 2 }}>Selfie Picture</Text>
+          <TouchableOpacity onPress={handleSelfieImagePick}>
+            <View style={{ borderWidth: 2, borderRadius: 4, borderColor: 'slategray', height: 220, justifyContent: 'center', alignItems: 'center', marginLeft: 5 }}>
+              {selfieImage ? (
+                <Image source={{ uri: selfieImage }} style={{ width: 250, height: 220 }} />
+              ) : (
+                <>
+                  <Entypo name="upload" size={24} color="#DC2626" />
+                  <Text style={{ color: 'red', fontWeight: 'bold' }}>Upload a picture of your Selfie</Text>
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+          <TouchableOpacity onPress={handleCameraPress} style={{ backgroundColor: '#DC2626', width: 150, height: 40, justifyContent: 'center', alignItems: 'center', marginHorizontal: 10 }}>
+            <Text style={{ color: 'white', fontSize: 18 }}>Take a Photo</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#DC2626', width: '90%', height: 40, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: 'white', fontSize: 18 }}>Submit</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
     </SafeAreaView>
   );
 };

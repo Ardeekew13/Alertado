@@ -18,7 +18,7 @@ let currentUser = null;
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
 });
-const Profile = () => {
+const ProfilePagePolice = () => {
   const [userData, setUserData] = useState(null);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
@@ -55,10 +55,10 @@ const Profile = () => {
   }
   
   // Check if the user has a profile picture URL
-  const hasProfilePicture = userData.selfiePicture !== undefined && userData.selfiePicture !== null;
+  const hasProfilePicture = userData.profilePictureURL !== undefined && userData.profilePictureURL !== null;
   
   // If the user has a profile picture URL, display it; otherwise, display the default image
-  const profilePicture = hasProfilePicture ? { uri: userData.selfiePicture } : require('./images/user.jpg');
+  const profilePicture = hasProfilePicture ? { uri: userData.profilePictureURL } : require('./images/user.jpg');
   
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -132,18 +132,13 @@ const passwordChange = async () => {
     const currentUser = getAuth().currentUser;
     const db = getFirestore();
     const userRef = doc(db, 'User', currentUser.uid);
-    
-    if (newPassword === newConfirmPassword) {
-      await updateDoc(userRef, { 
-        password: newPassword, 
-      });
-      setIsAddressModalOpen(false);
-    } else {
-      console.error('New password and new confirm password do not match');
-      // Handle the error or display an error message to the user
-    }
+    await updateDoc(userRef, { 
+      email: newEmail, 
+      status: "Pending",
+    });
+    setIsAddressModalOpen(false);
   } catch (error) {
-    console.error('Error updating password', error);
+    console.error('Error updating name:', error);
   }
 };
 const uploadImage = async () => {
@@ -209,8 +204,8 @@ return (
     <View className="flex flex-row">
       
       {image && <Image className="flex mx-auto mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
-      {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50}} />}
-      {!image && !userData.selfiePicture && <Image className="flex justify-left ml-8 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
+      {!image && userData.profilePicUrl && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.profilePicUrl }} style={{ width: 80, height: 80}} />}
+      {!image && !userData.profilePicUrl && <Image className="flex justify-left ml-8 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
       
       <View className="flex ml-4 mt-4 mb-4">
         <Text className=" text-2xl font-semibold">{userData.Lname}, {userData.Fname}</Text>
@@ -264,20 +259,112 @@ return (
       </View> 
      
       <View className="flex justify- mx-auto mt-10 justify-center py-auto ">
+            <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={() => setIsNameModalOpen(true)}>
+              <Text className="mx-auto text-base font-semibold">Change Name</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsPasswordModalOpen(true)}>
+            
+            <Modal 
+            visible={isNameModalOpen}
+            transparent={true}
+            animationType='slide'>
+            <View className="flex-1 justify-center ">
+            <View className="bg-white rounded-lg p-4 mx-auto py-auto  justify-center ">
+               <Text className="text-xl font-semibold mb-4 ">Enter your new name</Text>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4 mx-2" value={newName} onChangeText={setNewName} />
+                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={nameChange}>
+                 <Text className="font-semibold item-center mx-auto">Save</Text>
+                   </TouchableOpacity>
+                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsNameModalOpen(false)}>
+                            <Text className="font-semibold mx-auto">Cancel</Text>
+                              </TouchableOpacity>
+                              </View>
+                              </View>
+                              
+                  </Modal>
+                 
+            <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={() => setIsEmailModalOpen(true)}>
+              <Text className="mx-auto text-base font-semibold">Change Email</Text>
+              </TouchableOpacity>
+                   <Modal 
+            visible={isEmailModalOpen}
+            transparent={true}
+            animationType='slide'>
+            <View className="flex-1 justify-center ">
+            <View className="bg-white rounded-lg p-4 mx-auto py-auto  justify-center ">
+               <Text className="text-xl font-semibold mb-4 ">Enter your new Email</Text>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4 mx-2" value={newEmail} onChangeText={setNewEmail} />
+                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={emailChange}>
+                 <Text className="font-semibold item-center mx-auto">Save</Text>
+                   </TouchableOpacity>
+                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsEmailModalOpen(false)}>
+                            <Text className="font-semibold mx-auto">Cancel</Text>
+                              </TouchableOpacity>
+                              </View>
+                              </View>
+                  </Modal>
+                  
+                
+                
+          
+              <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsPhoneModalOpen(true)}>
+              <Text className="mx-auto text-base font-semibold">Change Phone Number</Text>
+            </TouchableOpacity>
+            <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center ">
+            <Modal 
+            visible={isPhoneModalOpen}
+            transparent={true}
+            animationType='slide'>
+            <View className="flex items-center justify-center my-auto w-96 ">
+            <View className="bg-white rounded-lg p-4">
+               <Text className="text-xl font-semibold mb-4">Enter your new Phone Number</Text>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder="+63" value={newPhone} onChangeText={setNewPhone}/>
+                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={phoneChange}>
+                 <Text className="font-semibold ">Save</Text>
+                   </TouchableOpacity>
+                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsPhoneModalOpen(false)}>
+                            <Text className="font-semibold">Cancel</Text>
+                              </TouchableOpacity>
+                              </View>
+                        </View>
+                  </Modal>
+                  </View>
+            <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsAddressModalOpen(true)}>
+            <Text className="mx-auto text-base font-semibold">Change Address</Text>
+          </TouchableOpacity>
+          <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center ">
+            <Modal 
+            visible={isAddressModalOpen}
+            transparent={true}
+            animationType='slide'>
+            <View className="flex items-center justify-center my-auto w-96 ">
+            <View className="bg-white rounded-lg p-4">
+               <Text className="text-xl font-semibold mb-4">Enter your new Address</Text>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder="Barangay, Town, Province" value={newAddress} onChangeText={setNewAddress}/>
+                <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={addressChange}>
+                 <Text className="font-semibold ">Save</Text>
+                   </TouchableOpacity>
+                       <TouchableOpacity className="bg-gray-500 text-white py-2 px-4 rounded-md mx-2" onPress={() => setIsAddressModalOpen(false)}>
+                            <Text className="font-semibold">Cancel</Text>
+                              </TouchableOpacity>
+                              </View>
+                        </View>
+                  </Modal>
+                  </View>
+          
+          <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsAddressModalOpen(true)}>
           <Text className="mx-auto text-base font-semibold">Change Password</Text>
         </TouchableOpacity>
-        <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center mx-auto ">
+        <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center ">
             <Modal 
             visible={isPasswordModalOpen}
             transparent={true}
             animationType='slide'>
             <View className="flex items-center justify-center my-auto w-96 ">
             <View className="bg-white rounded-lg p-4">
-               <Text className="text-xl font-semibold mb-4">Enter your new Password</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Enter your new password' value={newPassword} onChangeText={setNewPassword}/>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Confirm password' value={newConfirmPassword} onChangeText={setNewConfirmPassword}/>
+               <Text className="text-xl font-semibold mb-4">Enter your new Address</Text>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4"  value={newPassword} onChangeText={setNewPassword}/>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4"  value={newConfirmPassword} onChangeText={setNewConfirmPassword}/>
                 <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={passwordChange}>
                  <Text className="font-semibold ">Save</Text>
                    </TouchableOpacity>
@@ -297,4 +384,4 @@ return (
   </ScrollView>
 );
 }
-export default Profile;
+export default ProfilePagePolice;
