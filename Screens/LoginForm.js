@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button,SafeAreaView, Alert} from 'react-native';
 import { collection,query,where,doc, getDoc} from 'firebase/firestore';
@@ -5,7 +6,10 @@ import {signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { db,authentication } from '../firebaseConfig';
 import { useNavigation } from '@react-navigation/core';
 import RegistrationForm from './RegistrationForm';
+import { ActivityIndicator } from 'react-native';
+
 export default LoginForm = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [email, setEmail] = useState('');
@@ -14,6 +18,7 @@ export default LoginForm = () => {
   const [role, setRole]=useState('');
   const navigation=useNavigation()
 const handleLogin = async () => {
+  setIsLoading(true);
   try{
       const userCredential = await signInWithEmailAndPassword(authentication, email, password);
       const userId = userCredential.user.uid;
@@ -39,14 +44,20 @@ const handleLogin = async () => {
           }
         } else if (userRole === 'Admin') {
           navigation.navigate('BottomTabsAdmin');
+        } else if (userRole === 'Police') {
+          navigation.navigate('BottomTabsPolice');
         } else {
           setError('User not found');
         }
         
       }
+      setIsLoading(false);
     } catch (error) {
+      setIsLoading(false);
       if (error.code === 'auth/user-not-found') {
         setError('User not found');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Try again later');
       } else {
         setError('Incorrect email or password');
       }
@@ -72,7 +83,7 @@ const handleRegister = () => {
       <KeyboardAvoidingView behavio={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
          <View className="flex-1 justify-center bg-white">
-         <Text className="font-bold ml-8">Welcome
+         <Text className="font-bold ml-8 text-m">Welcome
          </Text>
          <Text className="ml-8 mt-1">Sign in to continue!</Text>
      <Image
@@ -98,8 +109,13 @@ const handleRegister = () => {
         <TouchableOpacity
           className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-[#E31A1A] items-center mx-auto"
           onPress={handleLogin}
+          disabled={isLoading}
         >
+        {isLoading ? (
+          <ActivityIndicator size="large"  color="#FFFFFF" />
+        ) : (
           <Text className="text-white text-lg font-medium mx-auto">Login</Text>
+        )}
         </TouchableOpacity>
         <TouchableOpacity onPress={handleRegister}>
         <Text className="items-center justify-center mx-auto mt-5 text-xl text-[#626161]">Don't have an account? <Text className="text-[#E02424] underline">Sign up</Text></Text>

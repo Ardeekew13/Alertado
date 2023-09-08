@@ -1,42 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Button, TouchableOpacity,TextInput, Alert, Modal, ScrollView} from 'react-native';
-import { collection, doc, onSnapshot, getFirestore,updateDoc } from '@firebase/firestore';
-import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
+import { View, Text, TextInput, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { doc, onSnapshot, getFirestore, updateDoc } from '@firebase/firestore';
+import { getAuth, signOut, onAuthStateChanged } from '@firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/core';
-import *  as ImagePicker from 'expo-image-picker';
-import { launchImageLibraryAsync } from 'expo-image-picker';
-import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
+import { ref, uploadBytes, getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebaseConfig';
 import { AntDesign, Ionicons, FontAwesome, MaterialIcons, Entypo } from '@expo/vector-icons'; 
-import { BlurView } from '@react-native-community/blur';
-
-
 const storage = getStorage(firebaseConfig);
 const auth = getAuth();
-let currentUser = null;
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-});
+
 const Profile = () => {
   const [userData, setUserData] = useState(null);
-  const [isNameModalOpen, setIsNameModalOpen] = useState(false);
-  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [newFName, setNewFName] = useState('');
   const [newLName, setNewLName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newConfirmPassword, setNewConfirmPassword] = useState('');
-  const [newEmail, setNewEmail] = useState('');
   const [image, setImage] = useState(null);
-  const [downloadURL, setDownloadURL] = useState(null);
-  const [imageUri, setImageUri] = useState(null);
-  const [uploading,setUploading]=useState(false);
-  const navigation=useNavigation()
+  const [uploading, setUploading] = useState(false);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const currentUser = getAuth().currentUser;
@@ -46,6 +30,11 @@ const Profile = () => {
     const unsubscribe = onSnapshot(userRef, (doc) => {
       const data = doc.data();
       setUserData(data);
+      setNewFName(data.Fname);
+      setNewLName(data.Lname);
+      setNewEmail(data.email);
+      setNewPhone(data.phone);
+      setNewAddress(data.address);
     });
 
     return unsubscribe;
@@ -54,6 +43,28 @@ const Profile = () => {
   if (!userData) {
     return <Text>Loading...</Text>;
   }
+
+  const saveChanges = async () => {
+    try {
+      const currentUser = getAuth().currentUser;
+      const db = getFirestore();
+      const userRef = doc(db, 'User', currentUser.uid);
+
+      const updatedData = {
+        Fname: newFName,
+        Lname: newLName,
+        email: newEmail,
+        phone: newPhone,
+        address: newAddress,
+      };
+
+      await updateDoc(userRef, updatedData);
+      Alert.alert('Changes saved successfully!');
+    } catch (error) {
+      console.error('Error saving changes:', error);
+    }
+  };
+  
   
   // Check if the user has a profile picture URL
   const hasProfilePicture = userData.profilePictureURL !== undefined && userData.profilePictureURL !== null;
@@ -71,76 +82,6 @@ const Profile = () => {
     const source = {uri: result.assets[0].uri}
     console.log(source)
     setImage(source)
-}; 
-const nameChange = async () => {
-  try {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-    const userRef = doc(db, 'User', currentUser.uid);
-    await updateDoc(userRef, { 
-      name: newName, 
-      status: "Pending",
-    });
-    setIsNameModalOpen(false);
-  } catch (error) {
-    console.error('Error updating name:', error);
-  }
-};
-const phoneChange = async () => {
-  try {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-    const userRef = doc(db, 'User', currentUser.uid);
-    await updateDoc(userRef, { 
-      phone: newPhone, 
-      status: "Pending",
-    });
-    setIsPhoneModalOpen(false);
-  } catch (error) {
-    console.error('Error updating name:', error);
-  }
-}
-  const emailChange = async () => {
-    try {
-      const currentUser = getAuth().currentUser;
-      const db = getFirestore();
-      const userRef = doc(db, 'User', currentUser.uid);
-      await updateDoc(userRef, { 
-        email: newEmail, 
-        status: "Pending",
-      });
-      setIsEmailModalOpen(false);
-    } catch (error) {
-      console.error('Error updating name:', error);
-    }
-};
-const addressChange = async () => {
-  try {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-    const userRef = doc(db, 'User', currentUser.uid);
-    await updateDoc(userRef, { 
-      email: newEmail, 
-      status: "Pending",
-    });
-    setIsAddressModalOpen(false);
-  } catch (error) {
-    console.error('Error updating name:', error);
-  }
-};
-const passwordChange = async () => {
-  try {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-    const userRef = doc(db, 'User', currentUser.uid);
-    await updateDoc(userRef, { 
-      email: newEmail, 
-      status: "Pending",
-    });
-    setIsAddressModalOpen(false);
-  } catch (error) {
-    console.error('Error updating name:', error);
-  }
 };
 const uploadImage = async () => {
   setUploading(true);
@@ -176,16 +117,8 @@ const handleVerify = () => {
   navigation.navigate('Citizen Verification');
 };
 
-
-/*<TouchableOpacity  className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto" onPress={pickImage}>
-<Text>Pick Image</Text>
-</TouchableOpacity>*/ //Pick image
-
-/*   <TouchableOpacity  className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto" onPress={uploadImage}>
-        <Text>Upload Image</Text>
-      </TouchableOpacity>*/ //upload
 return (
-  <ScrollView className={`bg-white ${isNameModalOpen || isPhoneModalOpen || isAddressModalOpen || isPasswordModalOpen ||isEmailModalOpen  ? "opacity-30" : "opacity-100"} `}>
+  <ScrollView>
   <SafeAreaView> 
       
       <Text className="mx-auto font-bold text-xl mb-4 ">Personal Information</Text>
@@ -196,7 +129,7 @@ return (
       </View>
       <View className="flex-col">
       <Text className=" text-sm text-stone-500">First Name</Text>
-      <TextInput className=" text-lg " value={newFName || userData.Fname} onChangeText={setNewFName} editable={true}/>
+      <TextInput className=" text-lg " value={newFName} onChangeText={setNewFName} editable={true} />
       <View className="border-0.5 w-56 justify-center mx-auto"></View>
 </View>
 </View>
@@ -208,7 +141,7 @@ return (
 </View>
 <View className="flex-col">
 <Text className=" text-sm text-stone-500">Last Name</Text>
-<TextInput className=" text-lg " value={newLName || userData.Lname} onChangeText={setNewLName} editable={true}/>
+<TextInput className=" text-lg " defaultValue={userData.Lname} onChangeText={setNewLName} editable={true}/>
 <View className="border-0.5 w-56 justify-center mx-auto"></View>
 
 </View>
@@ -222,7 +155,7 @@ return (
       </View>
       <View className="flex-col">
       <Text className=" text-sm text-stone-500">Email</Text>
-      <TextInput className=" text-lg " value={newEmail || userData.email} onChangeText={setNewEmail} editable={true}/>
+      <TextInput className=" text-lg " defaultValue={userData.email} onChangeText={setNewEmail} editable={true}/>
       <View className="border-0.5 w-56 justify-center mx-auto"></View>
 
       </View>
@@ -235,7 +168,7 @@ return (
       </View>
       <View className="flex-col justify-center">
       <Text className=" text-sm text-stone-500">Phone Number</Text>
-      <Text className=" text-lg">{userData.phone}</Text>
+      <TextInput className=" text-lg " defaultValue={userData.phone} onChangeText={setNewPhone} editable={true}/>
     <View className="border-0.5 w-56 justify-center mx-auto"></View>
 
       </View>
@@ -248,9 +181,21 @@ return (
       </View>
       <View className="flex-col justify-center">
       <Text className=" text-sm text-stone-500">Barangay</Text>
-      <Text className=" text-lg ">{userData.address}</Text>
+      <TextInput className=" text-lg " defaultValue={userData.address} onChangeText={setNewAddress} editable={true}/>
     <View className="border-0.5 w-56 justify-center mx-auto"></View>
-
+    <TouchableOpacity
+    style={{
+      width: '80%',
+      alignSelf: 'center',
+      backgroundColor: 'red',
+      padding: 10,
+      borderRadius: 5,
+      marginTop: 20,
+    }}
+    onPress={saveChanges}
+  >
+    <Text style={{ color: 'white', textAlign: 'center' }}>Save</Text>
+  </TouchableOpacity>
       </View>
       </View>
       </View> 

@@ -1,16 +1,17 @@
-import {Alert, ScrollView, View, Text, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
-import React  from 'react'
+import {Alert, ScrollView, View, Text, StyleSheet, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
 import { db,authentication } from '../firebaseConfig';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import firestore  from '@react-native-firebase/firestore';
-import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, increment, updateDoc} from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, increment, updateDoc, userDoc} from 'firebase/firestore';
 import DatePicker from 'react-native-modern-datepicker';
 import { MaterialIcons } from '@expo/vector-icons'; 
 import { getToday,getFormatedDate } from 'react-native-modern-datepicker';
-import MapView from 'react-native-maps';
 import { useNavigation } from '@react-navigation/core';
 import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
 import {Picker} from '@react-native-picker/picker';
+import MapView, { Marker, Circle } from 'react-native-maps';
+import * as Location from 'expo-location';
+
 
 const barangays = [
   "Alegria",
@@ -70,27 +71,51 @@ const ReportCrime =()=>{
   const [barangayCounts, setBarangayCounts] = useState({}); 
   const today = new Date();
   const navigation=useNavigation();
-  const startDate = getFormatedDate(today.setDate(today.getDate()), 'YYYY/MM/DD')
+  const startDate = getFormatedDate(today.setDate(today.getDate()), 'YYYY/MM/DD');  
+  const [initialRegion, setInitialRegion] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const mapRef = useRef(null);
+  const userMovedMap = useRef(false);
+  
   useEffect(() => {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-    const userRef = doc(db, 'User', currentUser.uid);
-
-    const unsubscribe = onSnapshot(userRef, (doc) => {
-      const data = doc.data();
-      setUserData(data);
-    });
-
-    return unsubscribe;
+    const fetchData = async () => {
+      const currentUser = getAuth().currentUser;
+      const db = getFirestore();
+      const userRef = doc(db, 'User', currentUser.uid);
+  
+      const unsubscribe = onSnapshot(userRef, (doc) => {
+        const data = doc.data();
+        setUserData(data);
+      });
+  
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.error('Permission to access location was denied');
+          return;
+        }
+  
+        const location = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = location.coords;
+  
+        setInitialRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+        setMarkerPosition({ latitude, longitude });
+        setUserLocation({ latitude, longitude });
+      } catch (error) {
+        console.error('Error getting current location', error);
+      }
+  
+      return unsubscribe;
+    };
+  
+    fetchData();
   }, []);
-
-  if (!userData) {
-    return <Text>Loading...</Text>;
-  }
-  
-  
-  
-  
   
   function handleOnPress (){
     setOpen(!open);
@@ -108,19 +133,31 @@ const pressSubmit = async ()=>{
   else if(message.length<10){
     setDetailsError('Cannot be less than to 10 characters');
   }
-  try {
-    const db = getFirestore();
+    else if (markerPosition === null) {
+    Alert.alert('Location not selected', 'Please select a location on the map');
+    } 
+    try {
+      const db = getFirestore();
+      
+      const transactionNumberDoc = doc(db, 'TransactionRep', 'transactionRepId');
+      const transactionSnapshot = await getDoc(transactionNumberDoc);
+    
+      let transactionRepId = '00001'; // Default value if no transaction ID exists
+    
+      if (transactionSnapshot.exists()) {
+        const { currentNumber } = transactionSnapshot.data();
+        const newTransactionNumber = currentNumber + 1;
+        transactionRepId = String(newTransactionNumber).padStart(5, '0');
+      }
+    
+      // Update the transactionRepId in Firestore
+      await setDoc(transactionNumberDoc, { currentNumber: Number(transactionRepId) });
+    
+    const location = {
+      latitude: markerPosition.latitude,
+      longitude: markerPosition.longitude,
+    };
     const userDoc = doc(collection(db, 'Reports'));
-
-    // Get the current transaction ID from Firestore
-    const transactionNumberDoc = doc(db, 'Transaction', 'transactionId');
-    const transactionSnapshot = await getDoc(transactionNumberDoc);
-    let transactionId = '00001'; // Default value if no transaction ID exists
-
-    if (transactionSnapshot.exists()) {
-      const { currentNumber } = transactionSnapshot.data();
-      transactionId = (currentNumber + 1).toString().padStart(5, '0');
-    }
     await setDoc(userDoc,{
     userId: currentUser.uid,
     name,
@@ -132,9 +169,10 @@ const pressSubmit = async ()=>{
     street,
     type: 'Crime',
     status: 'Pending',
-    transactionId,
+    transactionRepId,
+    location,
     });
-    const barangayDocRef = doc(db, 'barangayCounts', barangay);
+  const barangayDocRef = doc(db, 'barangayCounts', barangay);
 const barangaySnapshot = await getDoc(barangayDocRef);
 const currentCount = barangaySnapshot.exists() ? barangaySnapshot.data().count : 0;
 
@@ -148,7 +186,7 @@ setBarangayCounts(prevCounts => ({
   ...prevCounts,
   [barangay]: (prevCounts[barangay] || 0) + 1,
 }));
-    await setDoc(transactionNumberDoc, { currentNumber: increment(1) });
+
     
       Alert.alert('Report Successful!', 'Your report is under review.', [
         {
@@ -159,7 +197,7 @@ setBarangayCounts(prevCounts => ({
       ], { textAlign: 'center' });
     } catch (error) {
       console.error('Error adding user:', error);
-      Alert.alert('Error', 'An error occurred while adding the user.', [
+      Alert.alert('Error', 'An error occurred while reporting.', [
         {
           text: 'OK',
           onPress: () => {}, // Optional: Handle error dismissal
@@ -167,11 +205,40 @@ setBarangayCounts(prevCounts => ({
       ], { textAlign: 'center' });
     }
   }
+  const onRegionChange = (region) => {
+    if (!userMovedMap.current) {
+      const { latitude, longitude } = markerPosition;
+      setMarkerPosition({ latitude: region.latitude, longitude: region.longitude });
+    }
+  };
+  
+  const onMarkerDragStart = () => {
+    // Set the userMovedMap flag to true when the marker drag starts
+    userMovedMap.current = true;
+  };
+  
+  const onMarkerDragEnd = (e) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    setMarkerPosition({ latitude, longitude });
+    userMovedMap.current = false;
+};
+  
+ const onMapPanDrag = () => {
+  userMovedMap.current = true;
+};
+const onUserLocationChange = (location) => {
+  const { latitude, longitude } = location.coords;
+  setUserLocation({ latitude, longitude });
+
+  if (!userMovedMap.current) {
+    setMarkerPosition({ latitude, longitude });
+  }
+};
   return (
     <ScrollView>
     <SafeAreaView className="flex-1  bg-white">
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-    <View className="mt-16">
+    <View className="mt-12">
     <Text className="font-bold text-xl mx-auto">Report Crime Form</Text>
     <Text className="mx-auto italic mb-4 w-44 text-center">To report an incident, Please provide the following information</Text>
     <Text className="ml-5 mb-2 text-sm">Name</Text>
@@ -181,15 +248,16 @@ setBarangayCounts(prevCounts => ({
     value={name}
     onChangeText={(name)=>{setName(name)}}
      />
-    <Text className="ml-5 mb-2 text-sm">Description</Text>
-    <TextInput
-    className="border-0.5 w-11/12 px-4 rounded-lg mb-2 bg-gray-100 mx-auto h-32 text-start"
-    placeholder='Details of the incident'
-    editable
-    multiline
-    numberOfLines={6}
-    value={message}
-    onChangeText={(message)=>{setMessage(message)}}
+     <Text className="ml-5 mb-2 text-sm">Description</Text>
+     <TextInput
+       className="border-0.5 w-11/12 px-4 rounded-lg mb-2 bg-gray-100 mx-auto h-32 text-start"
+       placeholder='Details of the incident'
+       editable
+       multiline
+       numberOfLines={6}
+       value={message}
+       onChangeText={(message) => { setMessage(message) }}
+       style={{ textAlignVertical: 'top', paddingTop: 10, }} 
      />
      <Text className="ml-5 mb-2 text-sm">Was the suspect wanted/have or had any charges against him/her</Text>
      <TextInput
@@ -258,6 +326,33 @@ setBarangayCounts(prevCounts => ({
      ))}
    </Picker>
    </View>
+   {initialRegion ? (
+    <MapView
+          style={styles.map}
+          onRegionChange={onRegionChange}
+          initialRegion={initialRegion}
+          ref={mapRef}
+          onPanDrag={onMapPanDrag}
+        >
+          {markerPosition && (
+            <Marker
+              coordinate={markerPosition}
+              draggable
+              onDragEnd={onMarkerDragEnd}
+            />
+          )}
+          {userLocation && (
+            <Circle
+              center={userLocation}
+              radius={200}
+              fillColor="rgba(0, 128, 255, 0.2)"
+              strokeColor="rgba(0, 128, 255, 0.5)"
+            />
+      )}
+    </MapView>
+  ) : (
+    <Text>Loading...</Text>
+  )}
     <TouchableOpacity
     className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto mb-4"
     onPress={pressSubmit}
@@ -272,3 +367,13 @@ setBarangayCounts(prevCounts => ({
   )
 };
 export default ReportCrime;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+    marginHorizontal: 20,
+    height:250,
+  },
+});
