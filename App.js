@@ -25,18 +25,29 @@ import ViewComplaintsPolice from './Screens/ViewComplaintsPolice'
 import ViewReportsAdmin from './Screens/ViewReportsAdmin'
 import ViewComplaintsAdmin from './Screens/ViewComplaintsAdmin'
 import SOS from './Screens/SOS'
-import ViewSOS from './Screens/ViewSOS'
 import AdminRegisterPolice from './Screens/AdminRegisterPolice'
 import ViewReportDetails from './Screens/ViewReportDetails'
 import ViewReportDetailsPolice from './Screens/ViewReportDetailsPolice'
 import ViewReportDetailsAdmin from './Screens/ViewReportDetailsAdmin'
 import ViewComplaintDetails from './Screens/ViewComplaintDetails'
 import ViewComplaintDetailsPolice from './Screens/ViewComplaintDetailsPolice'
-import ViewComplaintDetailsAdmin from './Screens/ViewComplaintDetailsAdmin'
+import ViewComplaintDetailsAdmin from './Screens/ViewComplaintsDetailsAdmin'
 import PoliceHomepage from './Screens/PoliceHomepage'
-
+import ViewSOSPolice from './Screens/ViewSOSPolice'
+import ViewSOSDetailsPolice from './Screens/ViewSOSDetailsPolice'
+import PoliceAccept from './Screens/PoliceAccept'
+import PendingVerification from './Screens/PendingVerification'
+import FailedVerification from './Screens/FailedVerification'
+import { Ionicons } from '@expo/vector-icons';
+import GenerateStat from './Screens/GenerateStat'
 
 const Stack = createNativeStackNavigator();
+
+const LogoHeader = () => {
+  return (
+    <View style={{ backgroundColor: 'blue', width: 50, height: 50 }}></View>
+  );
+};
 export default function App() {
   return (
     <NavigationContainer>
@@ -61,11 +72,14 @@ export default function App() {
         <Stack.Screen
          name="LoginForm"
          component={LoginForm}
-         />
-         <Stack.Screen
-         name="AdminCreateAccount"
-         component={AdminCreateAccount}
-         
+         options={{
+          title: 'Log in',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
          />
          <Stack.Screen
          name="RegistrationForm"
@@ -108,6 +122,30 @@ export default function App() {
          component={ViewReportDetailsAdmin}
          options={{
           title: 'View Report Details Admin',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="Police Accept SOS"
+         component={PoliceAccept}
+         options={{
+          title: 'Police Accept',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="View SOS Details Police"
+         component={ViewSOSDetailsPolice}
+         options={{
+          title: 'View SOS Details',
           headerStyle: {
             backgroundColor: '#FE0000',
           },
@@ -163,6 +201,7 @@ export default function App() {
           headerTitleAlign: 'center', 
         }}
          />
+         
          <Stack.Screen
          name="AdminRegisterPolice"
          component={AdminRegisterPolice}
@@ -175,9 +214,34 @@ export default function App() {
           headerTitleAlign: 'center', 
         }}
          />
+          <Stack.Screen
+          name="HomePage"
+          component={HomePage}
+          options={{
+            title: 'Dashboard',
+            headerStyle: {
+              backgroundColor: '#FE0000',
+            },
+            headerTintColor: '#fff',
+            headerTitleAlign: 'center', 
+            headerRight: () => <LogoHeader />,
+          }}
+          />
+          <Stack.Screen
+          name="GenerateStat"
+          component={GenerateStat}
+          options={{
+            title: 'Statistics',
+            headerStyle: {
+              backgroundColor: '#FE0000',
+            },
+            headerTintColor: '#fff',
+            headerTitleAlign: 'center', 
+          }}
+          />
          <Stack.Screen
-         name="HomePage"
-         component={HomePage}
+         name="PoliceHomepage"
+         component={PoliceHomepage}
          options={{
           title: 'Dashboard',
           headerStyle: {
@@ -188,10 +252,10 @@ export default function App() {
         }}
          />
          <Stack.Screen
-         name="PoliceHomepage"
-         component={PoliceHomepage}
+         name="ViewSOSPolice"
+         component={ViewSOSPolice}
          options={{
-          title: 'Dashboard',
+          title: 'View SOS',
           headerStyle: {
             backgroundColor: '#FE0000',
           },
@@ -316,10 +380,14 @@ export default function App() {
         }}
          />
          <Stack.Screen
-         name="View SOS Police"
-         component={ViewSOS}
+         name="AdminVerify"
+         component={AdminVerify}
+         />
+         <Stack.Screen
+         name="Citizen Verification"
+         component={CitizenVerification}
          options={{
-          title: 'View SOS Police',
+          title: 'Verify your account',
           headerStyle: {
             backgroundColor: '#FE0000',
           },
@@ -328,17 +396,40 @@ export default function App() {
         }}
          />
          <Stack.Screen
-         name="AdminVerify"
-         component={AdminVerify}
+         name="Pending Verification"
+         component={PendingVerification}
+         options={{
+          title: 'ID Verification',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
          />
          <Stack.Screen
-         name="Citizen Verification"
-         component={CitizenVerification}
-         options={{ headerShown: false }}
+         name="Failed Verification"
+         component={FailedVerification}
+         options={{
+          title: 'ID Verification',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
          />
          <Stack.Screen
          name="AdminVerifyProof"
          component={AdminVerifyProof}
+         options={{
+          title: 'ID Verification',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
          />
          
          

@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ImageBackground, ScrollView, Alert} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getAuth, onAuthStateChanged } from '@firebase/auth';
-import { getFirestore, collection, onSnapshot } from '@firebase/firestore';
+import { Ionicons } from '@expo/vector-icons';
+import { getAuth, onAuthStateChanged} from '@firebase/auth';
+import { collection, query, where, onSnapshot, getFirestore, updateDoc, doc, deleteDoc, getDocs, getDoc, setDoc } from '@firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
-
 
 const ViewReportsPolice = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [reports, setReports] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState('Active');
+  const filterOptions = ['All', 'Active', 'Pending', 'Ongoing', 'Completed', 'Cancelled'];
+  const [activeReportsCount, setActiveReportsCount] = useState(0);
 
   const navigation = useNavigation();
 
@@ -58,46 +62,130 @@ const ViewReportsPolice = () => {
     navigation.navigate('Report Crime');
   };
   const handleClick = (report) => {
-    navigation.navigate('View Report Details', { report });
+    navigation.navigate('View Report Details Police', { report });
   };
-
+  const handleFilterChange = (filter) => {
+    setSelectedFilter(filter);
+    setIsFilterOpen(false); // Close the modal when a filter is selected
+  };
+  const filteredReports = () => {
+    if (selectedFilter === 'All') {
+      return reports;
+    } else if (selectedFilter === 'Active') {
+      return reports.filter(report => report.status === 'Pending' || report.status === 'Ongoing');
+    } else {
+      return reports.filter(report => report.status === selectedFilter);
+    }
+  };
   return (
     <View className="flex-1">
-      {reports.map((report) => (
-        <View key={report.id} className="flex flex-col mt-5">
-          <TouchableOpacity onPress={() => handleClick(report)}>
-            <View className="bg-white h-28 mx-4 rounded-lg">
-              <Text className="text-lg font-bold ml-2">{report.name}</Text>
-              <Text className="ml-2">{report.date}</Text>
-              <View>
-                <Text className="ml-2">
-                  {report.barangay}, {report.street}
-                </Text>
-                <Text className="text-lg ml-2 text-red-500">
-                  #REPORT_{report.transactionId}
-                </Text>
-              </View>
-              <Text
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: 8,
-                  transform: [{ translateY: -8 }],
-                  backgroundColor:
-                    report.status === 'Pending' ? 'orange' : 'white',
-                  padding: 8,
-                  borderRadius: 4,
-                  zIndex: 1,
-                }}
+    <ScrollView >
+<View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20, marginTop:10, }}>
+    <TouchableOpacity onPress={() => setIsFilterOpen(true)}>
+      <Text style={{ fontSize: 16, color: 'black' }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
+    </TouchableOpacity>
+  </View>
+  <Modal visible={isFilterOpen} transparent={true} animationType='slide'>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>
+          <TouchableOpacity onPress={() => setIsFilterOpen(false)} style={{ alignItems: 'flex-end' }}>
+          <Ionicons name="ios-close-outline" size={24} color="black" />
+        </TouchableOpacity>
+            {filterOptions.map(filter => (
+              <TouchableOpacity
+                key={filter}
+                onPress={() => handleFilterChange(filter)}
+                style={{ paddingVertical: 8 }}
               >
-                {report.status}
-              </Text>
-            </View>
-          </TouchableOpacity>
+                <Text>{filter}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      ))}
+      </Modal>
+ 
+  <Modal visible={isModalOpen} transparent={true} animationType='slide'>
+    <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>
+        <TouchableOpacity onPress={() => setIsModalOpen(false)} style={{ alignItems: 'flex-end' }}>
+          <Ionicons name="ios-close-outline" size={24} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleButton}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Report Crime</Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  );
+  </Modal>
+
+  {filteredReports().map((report) => (
+  <View key={report.transactionRepId} className="flex flex-col mt-5">
+    <TouchableOpacity onPress={() => handleClick(report)}>
+      <View className="bg-white h-28 mx-4 rounded-lg">
+        <Text className="text-lg font-bold ml-2">{report.name}</Text>
+        <TouchableOpacity onPress={() => handleDeleteButtonPress(report.transactionRepId)}>
+        <Text style={{
+        fontWeight: 'bold',
+        position: 'absolute',
+        right: 10,
+        color: 'red',
+        fontSize: 20,
+        transform: [{ translateY: -30 }], }}>X</Text>
+      </TouchableOpacity>
+        <Text className="ml-2">{report.date}</Text>
+        <View>
+          <Text className="ml-2">
+            {report.barangay}, {report.street}
+          </Text>
+          <Text className="text-lg ml-2 text-red-500">#REPORT_{report.transactionRepId}</Text>
+        </View>
+        <Text
+          style={{
+            position: 'absolute',
+            top: '50%',
+            right: 8,
+            transform: [{ translateY: -8 }],
+            backgroundColor:
+      report.status === 'Pending'
+        ? 'orange'
+        : report.status === 'Ongoing'
+        ? '#186EEE'
+        : report.status === 'Completed'
+        ? 'green'
+        : report.status === 'Cancelled'
+        ? 'red'
+        : 'black',
+            padding: 8,
+            borderRadius: 4,
+            zIndex: 1,
+          }}
+        >
+          {report.status}
+          
+        </Text>
+      </View>
+    </TouchableOpacity>
+  </View>
+))}
+</ScrollView>
+{userData && userData.status === 'Verified' && activeReportsCount < 3 && (
+<View style={{ position: 'absolute', bottom: 10, right: 20, zIndex: 1 }}>
+  <TouchableOpacity
+    style={{
+      backgroundColor: '#EF4444',
+      height: 60,
+      width: 60,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 30,
+    }}
+    onPress={() => setIsModalOpen(true)}
+  >
+    <Text style={{ color: 'white', fontSize: 24 }}>+</Text>
+  </TouchableOpacity>
+</View>
+)}
+</View>
+);
 };
 
 export default ViewReportsPolice;

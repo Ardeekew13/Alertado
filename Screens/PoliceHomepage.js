@@ -3,9 +3,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { NavigationContainer } from '@react-navigation/native'
 import { useNavigation } from '@react-navigation/core';
 import ReportCrime from './ReportCrime'
-import { View, Text, Image, Button, TouchableOpacity,TextInput, Alert, Modal, ScrollView} from 'react-native';
+import { View, Text, Image, Button, TouchableOpacity,TextInput, Alert, Modal, ScrollView, ActivityIndicator} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, doc, onSnapshot, getFirestore,updateDoc,getDoc } from '@firebase/firestore';
+import { collection, doc, onSnapshot, getFirestore,updateDoc,getDoc,query, getDocs } from '@firebase/firestore';
 import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
 import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} from 'firebase/storage';
 import firebaseConfig from '../firebaseConfig';
@@ -47,10 +47,55 @@ let currentUser = null;
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
 });
+
 const PoliceHomepage = ()=>{
   const [userData, setUserData] = useState(null);
   const [barangayCounts, setBarangayCounts] = useState({});
+  const [totalReportsCount, setTotalReportsCount] = useState(0);
+  const [totalComplaintsCount, setTotalComplaintsCount] = useState(0);
+  const [totalEmergenciesCount,  setTotalEmergenciesCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const navigation=useNavigation()
+  useEffect(() => {
+    const fetchCountsForAllUsers = async () => {
+      try {
+        const db = getFirestore();
+  
+        // Fetch the total number of reports
+        const reportsCollection = collection(db, 'Reports');
+        const reportsQuery = query(reportsCollection);
+  
+        const reportsSnapshot = await getDocs(reportsQuery);
+        const totalReportsCount = reportsSnapshot.size;
+  
+        // Fetch the total number of complaints
+        const complaintsCollection = collection(db, 'Complaints');
+        const complaintsQuery = query(complaintsCollection);
+  
+        const complaintsSnapshot = await getDocs(complaintsQuery);
+        const totalComplaintsCount = complaintsSnapshot.size;
+  
+        // Fetch the total number of emergencies
+        const emergenciesCollection = collection(db, 'Emergencies');
+        const emergenciesQuery = query(emergenciesCollection);
+  
+        const emergenciesSnapshot = await getDocs(emergenciesQuery);
+        const totalEmergenciesCount = emergenciesSnapshot.size;
+  
+        setTotalReportsCount(totalReportsCount);
+        setTotalComplaintsCount(totalComplaintsCount);
+        setTotalEmergenciesCount(totalEmergenciesCount);
+  
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+        setIsLoading(false);
+      }
+    };
+  
+    fetchCountsForAllUsers(); // Call the function to fetch counts for all users
+  }, []);
   useEffect(() => {
     const fetchBarangayCounts = async () => {
       // Fetch the initial counts from Firestore
@@ -90,29 +135,35 @@ const PoliceHomepage = ()=>{
     return () => unsubscribeUser();
   }, []);
   
+  if (!userData && isLoading) {
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <ActivityIndicator size="large" />
+    </View>
+  }
   if (!userData) {
-    return <Text>Loading...</Text>;
+
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" /></View>
   }
   return (
     <ScrollView>
       <SafeAreaView className="flex-1">
       <View className="flex-row justify-start items-center">
-        <Text className="mx-4 text-lg font-light">Hello,</Text>
-        <Text className="text-[#EF4444] font-bold text-lg">{userData.Fname} {userData.Lname}</Text>
+        <Text className="mx-4 text-lg font-light">Hello,<Text className="text-[#EF4444] font-bold text-lg">{userData.Fname} {userData.Lname}</Text></Text>
+        
       </View>
       <View className="mx-4">
            <Text className="text-[#817E7E] text-md">Check your activities in this dashboard</Text>
       </View>
       <View className="m-5 bg-white rounded-md p-5">
-        <Text className ="font-bold text-base ">0</Text>
+        <Text className ="font-bold text-base ">{totalReportsCount}</Text>
         <Text className ="font-bold text-base">Crime</Text>
       </View>
       <View className="mx-5 bg-white p-5 rounded-md">
-        <Text className ="font-bold text-base">0</Text>
+        <Text className ="font-bold text-base">{totalEmergenciesCount}</Text>
         <Text className ="font-bold text-base">Emergency</Text>
       </View>
       <View className="m-5 bg-white p-5 rounded-md">
-        <Text className ="font-bold text-base">0</Text>
+        <Text className ="font-bold text-base">{totalComplaintsCount}</Text>
         <Text className ="font-bold text-base">Complaint</Text>
       </View>
       <View className="border-0.5 mx-5"></View>

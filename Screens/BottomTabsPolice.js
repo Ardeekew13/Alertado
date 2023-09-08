@@ -12,7 +12,7 @@ import AdminVerify from './AdminVerify';
 import { createStackNavigator } from '@react-navigation/stack';
 import ViewReportsPolice from './ViewReportsPolice';
 import ViewComplaintsPolice from './ViewComplaintsPolice';
-
+import ViewSOSPolice from './ViewSOSPolice'
 
 
 
@@ -65,6 +65,20 @@ function BottomTabsPolice(){
     tabBarLabel: 'Complaints',
     tabBarIcon: ({ color, size }) => (
       <Octicons name="report" size={22} color={color} />
+    ),
+  }}
+/>
+<Tab.Screen
+  name="View SOS Police"
+  component={ViewSOSPolice}
+  options={{
+    tabBarLabel: 'SOS',
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons
+        name="notifications-outline"
+        size={27}
+        color={color}
+      />
     ),
   }}
 />

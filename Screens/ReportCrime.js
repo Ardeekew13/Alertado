@@ -2,7 +2,7 @@ import {Alert, ScrollView, View, Text, StyleSheet, TextInput,SafeAreaView,Toucha
 import { db,authentication } from '../firebaseConfig';
 import React, { useState, useEffect,useRef } from 'react';
 import firestore  from '@react-native-firebase/firestore';
-import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, increment, updateDoc} from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, increment, updateDoc, userDoc} from 'firebase/firestore';
 import DatePicker from 'react-native-modern-datepicker';
 import { MaterialIcons } from '@expo/vector-icons'; 
 import { getToday,getFormatedDate } from 'react-native-modern-datepicker';
@@ -136,25 +136,28 @@ const pressSubmit = async ()=>{
     else if (markerPosition === null) {
     Alert.alert('Location not selected', 'Please select a location on the map');
     } 
-  try {
-    const db = getFirestore();
-    const userDoc = doc(collection(db, 'Reports'));
-
-    // Get the current transaction ID from Firestore
-    const transactionNumberDoc = doc(db, 'Transaction', 'transactionId');
-    const transactionSnapshot = await getDoc(transactionNumberDoc);
-    let transactionId = '00001'; // Default value if no transaction ID exists
-
-    if (transactionSnapshot.exists()) {
-      const { currentNumber } = transactionSnapshot.data();
-      transactionId = (currentNumber + 1).toString().padStart(5, '0');
-    }
-
+    try {
+      const db = getFirestore();
+      
+      const transactionNumberDoc = doc(db, 'TransactionRep', 'transactionRepId');
+      const transactionSnapshot = await getDoc(transactionNumberDoc);
+    
+      let transactionRepId = '00001'; // Default value if no transaction ID exists
+    
+      if (transactionSnapshot.exists()) {
+        const { currentNumber } = transactionSnapshot.data();
+        const newTransactionNumber = currentNumber + 1;
+        transactionRepId = String(newTransactionNumber).padStart(5, '0');
+      }
+    
+      // Update the transactionRepId in Firestore
+      await setDoc(transactionNumberDoc, { currentNumber: Number(transactionRepId) });
+    
     const location = {
       latitude: markerPosition.latitude,
       longitude: markerPosition.longitude,
     };
-    
+    const userDoc = doc(collection(db, 'Reports'));
     await setDoc(userDoc,{
     userId: currentUser.uid,
     name,
@@ -166,7 +169,7 @@ const pressSubmit = async ()=>{
     street,
     type: 'Crime',
     status: 'Pending',
-    transactionId,
+    transactionRepId,
     location,
     });
   const barangayDocRef = doc(db, 'barangayCounts', barangay);
@@ -183,7 +186,7 @@ setBarangayCounts(prevCounts => ({
   ...prevCounts,
   [barangay]: (prevCounts[barangay] || 0) + 1,
 }));
-    await setDoc(transactionNumberDoc, { currentNumber: increment(1) });
+
     
       Alert.alert('Report Successful!', 'Your report is under review.', [
         {
@@ -254,7 +257,7 @@ const onUserLocationChange = (location) => {
        numberOfLines={6}
        value={message}
        onChangeText={(message) => { setMessage(message) }}
-       style={{ textAlignVertical: 'top', paddingTop: 10, }} // Add this line to align the text to the top
+       style={{ textAlignVertical: 'top', paddingTop: 10, }} 
      />
      <Text className="ml-5 mb-2 text-sm">Was the suspect wanted/have or had any charges against him/her</Text>
      <TextInput

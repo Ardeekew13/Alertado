@@ -8,7 +8,8 @@ import { launchImageLibraryAsync } from 'expo-image-picker';
 import { db, authentication, storage } from '../firebaseConfig';
 import { useNavigation } from '@react-navigation/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Entypo, Ionicons } from '@expo/vector-icons'; 
+import { Entypo, Ionicons,Feather } from '@expo/vector-icons'; 
+import { ScrollView } from 'react-native-gesture-handler';
 
 
 const CitizenVerification = () => {
@@ -32,7 +33,7 @@ const CitizenVerification = () => {
       quality: 1,
     });
 
-    if (!result.cancelled) {
+    if (!result.canceled) {
       setidImage(result.assets[0].uri);
     }
   };
@@ -50,7 +51,7 @@ const CitizenVerification = () => {
         quality: 1,
       });
 
-      if (!result.cancelled) {
+      if (!result.canceled) {
         setselfieImage(result.assets[0].uri);
       }
     }
@@ -63,7 +64,7 @@ const CitizenVerification = () => {
       quality: 1,
     });
 
-    if (!result.cancelled) {
+    if (!result.canceled) {
       setselfieImage(result.assets[0].uri);
     }
   };
@@ -114,7 +115,7 @@ const CitizenVerification = () => {
           {
             text: 'OK',
             onPress: () => {
-              navigation.navigate('HomePage');
+              navigation.navigate('BottomTabs', { screen: 'HomePage' });
             },
             style: 'cancel',
           },
@@ -140,23 +141,19 @@ const CitizenVerification = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-    <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginLeft: 2, alignItems: 'center' }}>
-        <TouchableOpacity onPress={backButton}>
-          <Ionicons name="chevron-back-outline" size={30} color="black" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 20, marginBottom: 4 }}>Verify your account</Text>
-        </View>
+    <ScrollView style={{ flex: 1 }}>
+    <View style={{ backgroundColor: 'rgba(0, 128, 0, 0.1)', padding: 20, marginBottom:15,}}>
+        <Text style={{ textAlign: 'center', color: 'green', fontWeight: 'bold' }}>
+        "Please provide clear and legible information on your ID. For the ID picture and selfie, ensure high quality, non-blurry images. Thank you for your cooperation."
+        </Text>
       </View>
-
+    <View style={{ flex: 1 }}>
         <View style={{ marginBottom: 20 }}>
-          <Text style={{ marginLeft: 4, marginBottom: 2 }}>Identification Card</Text>
+          <Text style={{ marginLeft: 4, marginBottom: 2,textAlign:'center', fontWeight:'bold' }}>Identification Card</Text>
           <TouchableOpacity onPress={handleIdImagePick}>
             <View style={{ borderWidth: 2, borderRadius: 4, borderColor: 'slategray', height: 220, justifyContent: 'center', alignItems: 'center', marginLeft: 5 }}>
               {idImage ? (
-                <Image source={{ uri: idImage }} style={{ width: 250, height: 220 }} />
+                <Image source={{ uri: idImage }} style={{ width: 250, height: 210 }} />
               ) : (
                 <>
                   <Entypo name="upload" size={24} color="#DC2626" />
@@ -167,12 +164,12 @@ const CitizenVerification = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ marginLeft: 4, marginBottom: 2 }}>Selfie Picture</Text>
+        <View style={{ marginBottom: 10 }}>
+          <Text style={{ marginLeft: 4, marginBottom: 2, textAlign:'center', fontWeight:'bold'}}>Selfie Picture</Text>
           <TouchableOpacity onPress={handleSelfieImagePick}>
             <View style={{ borderWidth: 2, borderRadius: 4, borderColor: 'slategray', height: 220, justifyContent: 'center', alignItems: 'center', marginLeft: 5 }}>
               {selfieImage ? (
-                <Image source={{ uri: selfieImage }} style={{ width: 250, height: 220 }} />
+                <Image source={{ uri: selfieImage }} style={{ width: 250, height: 210 }} />
               ) : (
                 <>
                   <Entypo name="upload" size={24} color="#DC2626" />
@@ -183,19 +180,22 @@ const CitizenVerification = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-          <TouchableOpacity onPress={handleCameraPress} style={{ backgroundColor: '#DC2626', width: 150, height: 40, justifyContent: 'center', alignItems: 'center', marginHorizontal: 10 }}>
-            <Text style={{ color: 'white', fontSize: 18 }}>Take a Photo</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={{ flexDirection: 'row-reverse', width: '100%', justifyContent: 'center', marginBottom: 30 }}>
+        <TouchableOpacity onPress={handleCameraPress} style={{ borderRadius: 7, backgroundColor: '#D3D3D3', width: 180, height: 40, justifyContent: 'center', alignItems: 'center', paddingLeft: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Feather name="camera" size={20} color="black" />
+            <Text style={{ color: 'black', fontSize: 18, marginLeft:5}}>Take a Photo</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
 
         <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#DC2626', width: '90%', height: 40, justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity onPress={handleSubmit} style={{  borderRadius:7, backgroundColor: '#DC2626', width: '90%', height: 45, justifyContent: 'center', alignItems: 'center' }}>
             <Text style={{ color: 'white', fontSize: 18 }}>Submit</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </ScrollView>
   );
 };
 

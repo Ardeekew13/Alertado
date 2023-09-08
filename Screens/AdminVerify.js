@@ -46,7 +46,7 @@ const AdminVerify = () => {
         
         <Text className="justify-center text-lg font-bold">{user.Lname}, {user.Fname}</Text>
         <Text className="justify-center">{user.role}</Text>
-        <Text className="justify-center">Account Status: {user.status}</Text>
+        <Text className="justify-center">Account Status: <Text style={{fontWeight:'bold'}}>{user.status}</Text></Text>
       </View>
       </View>
 

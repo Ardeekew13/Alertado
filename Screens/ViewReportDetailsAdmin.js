@@ -112,7 +112,6 @@ const ViewReportDetailsAdmin = ({ route }) => {
                 description={`#${report.transactionId}`}
               />
             )}
-            {/* Add more Marker components for additional markers */}
           </MapView>
         )}
 

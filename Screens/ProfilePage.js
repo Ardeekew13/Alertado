@@ -177,47 +177,68 @@ signOut(auth).then(() => {
 });
 }
 const handleVerify = () => {
-  navigation.navigate('Citizen Verification');
+  if (userData.status === 'Pending') {
+    navigation.navigate('Pending Verification'); // Redirect to the verification screen for pending accounts
+  } else if (userData.status === 'Unverified') {
+    navigation.navigate('Citizen Verification'); // Redirect to a screen for unverified accounts
+  }else{
+    navigation.navigate('Failed Verification');
+  }
 };
 const handleEdit = () => {
   navigation.navigate('Profile PageChange');
 };
 
-
-/*<TouchableOpacity  className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto" onPress={pickImage}>
-<Text>Pick Image</Text>
-</TouchableOpacity>*/ //Pick image
-
-/*   <TouchableOpacity  className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto" onPress={uploadImage}>
-        <Text>Upload Image</Text>
-      </TouchableOpacity>*/ //upload
 return (
-  <ScrollView className={`bg-white ${isNameModalOpen || isPhoneModalOpen || isAddressModalOpen || isPasswordModalOpen ||isEmailModalOpen  ? "opacity-30" : "opacity-100"} `}>
+  <ScrollView className>
   <SafeAreaView>
     <View className="flex">
     <View className="flex flex-row">
-  
-    <Ionicons name="chevron-back" size={27} color="black" />
 
-    <Text className="font-semibold text-l justify-center items-center text-center mx-auto mb-4">My Profile</Text>
-    <View className="mr-3">
-    <TouchableOpacity onPress={handleEdit}>
-    <AntDesign name="edit" size={27} color="black" />
-    </TouchableOpacity>
+    <View className="justify-left">
     </View>
     </View>
     <View className="flex flex-row">
       
-      {image && <Image className="flex mx-auto mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
+      {image && <Image className="flex ml-2 mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
       {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50}} />}
-      {!image && !userData.selfiePicture && <Image className="flex justify-left ml-8 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
+      {!image && !userData.selfiePicture && <Image className="flex justify-left ml-4 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
       
-      <View className="flex ml-4 mt-4 mb-4">
+      <View className="flex ml-2 mt-4 mb-4">
         <Text className=" text-2xl font-semibold">{userData.Lname}, {userData.Fname}</Text>
-        <Text className=" text-lg  text-red-500">{userData.status}</Text>
-        <TouchableOpacity onPress={handleVerify}>
-        <Text className=" text-sm font-semibold mt-2">Verify your Account</Text>
-        </TouchableOpacity>
+        <Text
+  style={{
+    width: userData.status === 'Unverified' ? 90 : 70,
+    marginTop:2,
+  letterSpacing: 1,
+  fontWeight:500,
+    fontSize: 12,
+    color: 'white',
+    backgroundColor:
+    userData.status === 'Verified'
+      ? 'green'
+      : userData.status === 'Unverified'
+      ? 'red'
+      : userData.status === 'Pending'
+      ? 'orange'
+      : userData.status === 'Failed'
+      ? '#e4009c' 
+      : 'white',
+    textAlign:'center',
+    padding: 5,
+    borderRadius: 4,
+
+  }}
+>
+  {userData.status}
+</Text>
+        {userData.status !== 'Verified' && (
+          <TouchableOpacity onPress={handleVerify}>
+            <Text style={{ fontSize: 14, fontWeight: '600', marginTop: 2, textDecorationLine: 'underline'}}>
+              Verify your Account
+            </Text>
+          </TouchableOpacity>
+          )}
         </View>
       
       </View>
@@ -264,10 +285,13 @@ return (
       </View> 
      
       <View className="flex justify- mx-auto mt-10 justify-center py-auto ">
-
-          <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2"  onPress={() => setIsPasswordModalOpen(true)}>
-          <Text className="mx-auto text-base font-semibold">Change Password</Text>
+      <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={handleEdit}>
+      <Text className="mx-auto text-base font-semibold color-white">Edit Profile</Text>
+      </TouchableOpacity>
+          <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2 "  onPress={() => setIsPasswordModalOpen(true)}>
+          <Text className="mx-auto text-base font-semibold color-white">Change Password</Text>
         </TouchableOpacity>
+        
         <View className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center mx-auto ">
             <Modal 
             visible={isPasswordModalOpen}
@@ -289,7 +313,7 @@ return (
                   </Modal>
                   </View>
         <TouchableOpacity className="bg-[#D01010] w-52 h-10 justify-center rounded-md mb-2" onPress={Signout}>
-        <Text className="mx-auto text-base font-semibold">Sign Out</Text>
+        <Text className="mx-auto text-base font-semibold color-white">Sign Out</Text>
         </TouchableOpacity>
         </View>
     </View>

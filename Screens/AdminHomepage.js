@@ -50,7 +50,49 @@ onAuthStateChanged(auth, (user) => {
 const AdminHomePage = ()=>{
   const [userData, setUserData] = useState(null);
   const [barangayCounts, setBarangayCounts] = useState({});
+  const [totalReportsCount, setTotalReportsCount] = useState(0);
+  const [totalComplaintsCount, setTotalComplaintsCount] = useState(0);
+  const [totalEmergenciesCount,  setTotalEmergenciesCount] = useState(0);
   const navigation=useNavigation()
+  useEffect(() => {
+    const fetchCountsForAllUsers = async () => {
+      try {
+        const db = getFirestore();
+  
+        // Fetch the total number of reports
+        const reportsCollection = collection(db, 'Reports');
+        const reportsQuery = query(reportsCollection);
+  
+        const reportsSnapshot = await getDocs(reportsQuery);
+        const totalReportsCount = reportsSnapshot.size;
+  
+        // Fetch the total number of complaints
+        const complaintsCollection = collection(db, 'Complaints');
+        const complaintsQuery = query(complaintsCollection);
+  
+        const complaintsSnapshot = await getDocs(complaintsQuery);
+        const totalComplaintsCount = complaintsSnapshot.size;
+  
+        // Fetch the total number of emergencies
+        const emergenciesCollection = collection(db, 'Emergencies');
+        const emergenciesQuery = query(emergenciesCollection);
+  
+        const emergenciesSnapshot = await getDocs(emergenciesQuery);
+        const totalEmergenciesCount = emergenciesSnapshot.size;
+  
+        setTotalReportsCount(totalReportsCount);
+        setTotalComplaintsCount(totalComplaintsCount);
+        setTotalEmergenciesCount(totalEmergenciesCount);
+  
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+        setIsLoading(false);
+      }
+    };
+  
+    fetchCountsForAllUsers(); // Call the function to fetch counts for all users
+  }, []);
   useEffect(() => {
     const fetchBarangayCounts = async () => {
       // Fetch the initial counts from Firestore
