@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@firebase/auth';
 import { getFirestore, collection, onSnapshot, getDocs, query, where,updateDoc } from '@firebase/firestore';
@@ -9,9 +9,45 @@ const ViewSOSPolice = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const [emergencies, setEmergencies] = useState([]); 
-
+  const [currentUser, setCurrentUser] = useState(null);
   const navigation = useNavigation();
 
+
+
+ 
+  useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      const ongoingEmergency = checkOngoingEmergencies(user.uid, emergencies);
+
+      if (ongoingEmergency) {
+        navigateToPoliceAccept(ongoingEmergency);
+      }
+    }
+  }, [emergencies]);
+  const navigateToPoliceAccept = (emergency) => {
+    if (emergency.status === 'Ongoing') {
+      navigation.navigate('Police Accept SOS', { emergency });
+    }
+  };
+
+
+  const checkOngoingEmergencies = (currentUserUid, emergencies) => {
+    if (!currentUserUid || !emergencies || emergencies.length === 0) {
+      return null;
+    }
+
+    const ongoingEmergency = emergencies.find((emergency) => {
+      return (
+        emergency.status === 'Ongoing' &&
+        emergency.policeAssignedID === currentUserUid
+      );
+    });
+
+    return ongoingEmergency;
+  };
   const fetchEmergencies = () => {
     const db = getFirestore();
     const emergenciesRef = collection(db, 'Emergencies');
@@ -49,9 +85,10 @@ const ViewSOSPolice = () => {
     }, [])
   );
 
-  if (!userData) {
-    return <Text>Loading...</Text>;
-  }
+  // Call the function when the component renders
+  useEffect(() => {
+    checkOngoingEmergencies(userData, emergencies);
+  }, [userData, emergencies]);
 
   const handleButton = () => {
     navigation.navigate('Report Crime');
@@ -59,18 +96,19 @@ const ViewSOSPolice = () => {
   const handleClick = (emergency) => {
     navigation.navigate('View SOS Details Police', { emergency });
   };
+
   const getMinutesAgo = (timestamp) => {
     if (!timestamp) return null;
-  
+
     const now = new Date();
     const reportTime = new Date(timestamp);
-  
+
     // Calculate the difference in milliseconds between the current time and the report time
     const timeDiff = now.getTime() - reportTime.getTime();
-  
+
     // Convert the time difference to minutes
     const minutesAgo = Math.floor(timeDiff / (1000 * 60));
-  
+
     // Convert to human-readable format
     if (minutesAgo < 60) {
       return `${minutesAgo} minutes ago`;
@@ -82,6 +120,7 @@ const ViewSOSPolice = () => {
       return `${daysAgo} days ago`;
     }
   };
+
   const handleCancelButtonPress = (emergencyId) => {
     Alert.alert(
       'Cancel Emergency',
@@ -99,29 +138,30 @@ const ViewSOSPolice = () => {
       ],
     );
   };
+
   const updateComplaintStatus = async (transactionSosId) => {
     try {
       const db = getFirestore();
       const complaintsRef = collection(db, 'Emergencies');
       const querySnapshot = await getDocs(query(complaintsRef, where('transactionSosId', '==', transactionSosId.toString())));
-  
+
       if (querySnapshot.empty) {
         console.log('Document not found');
         return;
       }
-  
+
       const complaintDoc = querySnapshot.docs[0];
-  
+
       // Update the status field to "Cancel"
       await updateDoc(complaintDoc.ref, { status: 'Cancelled' });
-  
+
       console.log('Complaint status updated to "Cancel" successfully');
     } catch (error) {
       console.log('Error updating complaint status:', error);
     }
   };
   return (
-    <View className="flex-1">
+    <ScrollView className="flex-1">
       {emergencies.map((emergency) => (
         <View key={emergency.transactionSosId} className="flex flex-col mt-5 ">
           <TouchableOpacity onPress={() => handleClick(emergency)}>
@@ -145,17 +185,32 @@ const ViewSOSPolice = () => {
               )}
               <Text
                 style={[
+                  
                   styles.statusText,
-                  { backgroundColor: emergency.status === 'Pending' ? 'orange' : 'white' },
+                  { backgroundColor:
+                    emergency.status === 'Pending'
+                      ? 'orange'
+                      :  emergency.status === 'Ongoing'
+                      ? '#186EEE'
+                      :  emergency.status === 'Completed'
+                      ? 'green'
+                      :  emergency.status === 'Cancelled'
+                      ? 'red'
+                      : 'black',
+                          padding: 8,
+                          borderRadius: 4,
+                          zIndex: 1,
+                       },
                 ]}
               >
+             
                 {emergency.status}
               </Text>
             </View>
           </TouchableOpacity>
         </View>
       ))}
-    </View>
+    </ScrollView>
   );
 };
 

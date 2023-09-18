@@ -7,13 +7,15 @@ import {
   TouchableOpacity,
   Alert,
   Image,
-  Animated
+  Animated,
+  ActivityIndicator
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import  MapView, {Marker, Circle } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
-import firebaseConfig, { db } from '../firebaseConfig';
+import firebaseConfig, { db, auth }from '../firebaseConfig';
+import { getAuth,onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, deleteDoc, doc, collection, query, where, getDocs, updateDoc,getDoc,setDoc } from '@firebase/firestore';
  const getTimeAgo = (timestamp) => {
     if (!timestamp) return null;
@@ -51,10 +53,29 @@ const ViewSOSDetailsPolice = ({ route }) => {
   const [address, setAddress] = useState(null);
   const navigation = useNavigation();
   const circleScale = new Animated.Value(1);
-
+  const [currentUser, setCurrentUser] = useState(null);
   const pingingCircleScale = new Animated.Value(1); // Add this for pinging effect
   const pingingCircleRadius = new Animated.Value(0); // Add this for pinging effect
 
+
+  useEffect(() => {
+    // Initialize Firebase auth
+    const auth = getAuth();
+
+    // Set up an authentication state listener
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in
+        setCurrentUser(user);
+      } else {
+        // User is signed out
+        setCurrentUser(null);
+      }
+    });
+
+    // Clean up the listener when the component unmounts
+    return () => unsubscribe();
+  }, []);
   const onMapReady = () => {
     setMapReady(true);
   };
@@ -71,8 +92,8 @@ const ViewSOSDetailsPolice = ({ route }) => {
   useEffect(() => {
     if (mapReady && mapRef.current) {
       const region = {
-        latitude: emergency.location.latitude,
-        longitude: emergency.location.longitude,
+        latitude: emergency.citizenLocation.latitude,
+        longitude: emergency.citizenLocation.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
@@ -80,13 +101,13 @@ const ViewSOSDetailsPolice = ({ route }) => {
       mapRef.current.animateToRegion(region, 1000);
       startPulsatingEffect();
     }
-  }, [mapReady, emergency.location]);
+  }, [mapReady, emergency.citizenLocation]);
 
   useEffect(() => {
     if (mapReady && mapRef.current) {
       const region = {
-        latitude: emergency.location.latitude,
-        longitude: emergency.location.longitude,
+        latitude: emergency.citizenLocation.latitude,
+        longitude: emergency.citizenLocation.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
@@ -94,7 +115,7 @@ const ViewSOSDetailsPolice = ({ route }) => {
       mapRef.current.animateToRegion(region, 1000);
       startPulsatingEffect();
     }
-  }, [mapReady, emergency.location]);
+  }, [mapReady, emergency.citizenLocation]);
   
   useEffect(() => {
   }, []);
@@ -110,11 +131,24 @@ const ViewSOSDetailsPolice = ({ route }) => {
     }
   };
  
+  const getCurrentUserID = () => {
+    const user = auth.currentUser; // Get the currently logged-in user
+    if (user) {
+      // If a user is logged in, return their UID (User ID)
+      return user.uid;
+    } else {
+      // If no user is logged in, return null or handle it as needed
+      return null;
+    }
+  };
+  
   const handleClick = async (emergency) => {
     try {
       const db = getFirestore();
       const complaintsRef = collection(db, 'Emergencies');
-      const querySnapshot = await getDocs(query(complaintsRef, where('transactionSosId', '==', emergency.transactionSosId.toString())));
+      const querySnapshot = await getDocs(
+        query(complaintsRef, where('transactionSosId', '==', emergency.transactionSosId.toString()))
+      );
   
       if (querySnapshot.empty) {
         console.log('Document not found');
@@ -123,13 +157,42 @@ const ViewSOSDetailsPolice = ({ route }) => {
   
       const complaintDoc = querySnapshot.docs[0];
   
-      // Update the status field to "Cancel"
+      // Update the status field to "Ongoing"
       await updateDoc(complaintDoc.ref, { status: 'Ongoing' });
-      navigation.navigate('Police Accept SOS', {
-        userSosLocation: emergency.location,
-        transactionSosId: emergency.transactionSosId,
+  
+      // Get the ID of the currently logged-in police officer
+      const auth = getAuth();
+      const user = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const userID = user.uid;
+          console.log(userID)
+          // Query the "Users" collection to get police officer's additional information
+          const userDoc = await getDoc(doc(db, 'User', userID));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            // Add the policeAssignedID, Fname, Lname, and phone to the Firestore document
+            await updateDoc(complaintDoc.ref, {
+              policeAssignedID: userID,
+              policeFname: userData.Fname,
+              policeLname:  userData.Lname,
+              policePhone:  userData.phone,
+            });
+  
+            navigation.navigate('Police Accept SOS', {
+              userSosLocation: emergency.citizenLocation,
+              emergency: emergency,
+              transactionSosId: emergency.transactionSosId,
+              policeAssignedID:emergency.policeAssignedID,
+            });
+  
+            console.log('Complaint status updated to "Ongoing" successfully');
+          } else {
+            console.log('User document not found.'); // Handle the case when user document is not found
+          }
+        } else {
+          console.log('No user is logged in.'); // Handle the case when no user is logged in
+        }
       });
-      console.log('Complaint status updated to "Ongoing" successfully');
     } catch (error) {
       console.log('Error updating complaint status:', error);
     }
@@ -152,9 +215,9 @@ const ViewSOSDetailsPolice = ({ route }) => {
     );
   };
   useEffect(() => {
-    if (emergency.location) {
+    if (emergency.citizenLocation) {
       // Construct the API URL
-      const apiUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${emergency.location.latitude}&lon=${emergency.location.longitude}&apiKey=ab9f834b500a40bf9c3ed196ee1a0ead`;
+      const apiUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${emergency.citizenLocation.latitude}&lon=${emergency.citizenLocation.longitude}&apiKey=ab9f834b500a40bf9c3ed196ee1a0ead`;
 
       // Make the API request
       fetch(apiUrl)
@@ -168,35 +231,36 @@ const ViewSOSDetailsPolice = ({ route }) => {
           console.error('Error fetching reverse geocoding data:', error);
         });
     }
-  }, [emergency.location]);
+  }, [emergency.citizenLocation]);
   return (
     <ScrollView style={styles.flexContainer}>
+    
       <View style={styles.mapContainer}>
-        {emergency.location && (
+        {emergency.citizenLocation && (
           <MapView
             style={styles.map}
             ref={mapRef}
             initialRegion={{
-              latitude: emergency.location.latitude,
-              longitude: emergency.location.longitude,
+              latitude: emergency.citizenLocation.latitude,
+              longitude: emergency.citizenLocation.longitude,
               latitudeDelta: 0.02,
               longitudeDelta: 0.02,
             }}
-            onMapReady={onMapReady}
+            onLayout={() => setMapReady(true)}
           >
             {mapReady && (
               <>
               <Animated.View style={{ transform: [{ scale: circleScale }] }}>
                 <Circle
-                  center={emergency.location}
+                  center={emergency.citizenLocation}
                   radius={300}
-                  fillColor="rgba(255, 0, 0, 0.3)"
-                  strokeColor="red"
+                  fillColor="rgba(0, 128, 255, 0.2)"
+                  strokeColor="rgba(0, 128, 255, 0.5)"
                   strokeWidth={2}
                 />
                 </Animated.View>
                 <Marker
-                  coordinate={emergency.location}
+                  coordinate={emergency.citizenLocation}
                   title={emergency.name}
                   description={`#${emergency.transactionId}`}
                 >
@@ -208,6 +272,7 @@ const ViewSOSDetailsPolice = ({ route }) => {
           </MapView>
         )}
       </View>
+  
       <View style={styles.detailsContainer}>
         <Text style={styles.urgentHelpText}>Needs Urgent Help</Text>
         <Text style={styles.normalText}>Name: <Text style={styles.boldText}> {emergency.userFirstName}</Text></Text>

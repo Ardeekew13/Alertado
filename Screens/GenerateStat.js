@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
 import { getFirestore, collection, query, where, getDocs } from '@firebase/firestore';
 import { Picker } from '@react-native-picker/picker';
-import { BarChart } from 'react-native-chart-kit';
 
 const GenerateStat = () => {
   const [crimeData, setCrimeData] = useState([]);
@@ -14,6 +12,9 @@ const GenerateStat = () => {
     weekly: '',
     monthly: '',
   });
+  const [todayReports, setTodayReports] = useState(0);
+  const [thisWeekReports, setThisWeekReports] = useState(0);
+  const [thisMonthReports, setThisMonthReports] = useState(0);
 
   useEffect(() => {
     const fetchCrimeData = async () => {
@@ -25,17 +26,11 @@ const GenerateStat = () => {
         let startDate;
 
         if (timeFrame === 'daily') {
-          const today = new Date();
-          startDate = new Date(today);
-          startDate.setDate(today.getDate() - 1);
+          startDate = addDays(new Date(), -1); // Subtract 1 day from the current date
         } else if (timeFrame === 'weekly') {
-          const today = new Date();
-          startDate = new Date(today);
-          startDate.setDate(today.getDate() - 7);
+          startDate = addWeeks(new Date(), -1); // Subtract 1 week from the current date
         } else if (timeFrame === 'monthly') {
-          const today = new Date();
-          startDate = new Date(today);
-          startDate.setMonth(today.getMonth() - 1);
+          startDate = addMonths(new Date(), -1); // Subtract 1 month from the current date
         }
 
         const querySnapshot = await getDocs(
@@ -78,7 +73,7 @@ const GenerateStat = () => {
       const date = dataPoint.date;
       const today = new Date();
       if (timeframe === 'daily') {
-        return date >= today.setDate(today.getDate() - 1);
+        return date >= today.setHours(0, 0, 0, 0);
       } else if (timeframe === 'weekly') {
         return date >= today.setDate(today.getDate() - 7);
       } else if (timeframe === 'monthly') {
@@ -134,7 +129,6 @@ const GenerateStat = () => {
         <Picker.Item label="Weekly" value="weekly" />
         <Picker.Item label="Monthly" value="monthly" />
       </Picker>
-    
 
       <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
         Most Reported Barangay - Daily
@@ -155,6 +149,19 @@ const GenerateStat = () => {
       </Text>
       <Text style={{ fontSize: 16, textAlign: 'center' }}>
         {`Barangay with Most Reported Crimes (Monthly): ${mostReportedBarangay.monthly}`}
+      </Text>
+
+      <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+        Total Reports
+      </Text>
+      <Text style={{ fontSize: 16, textAlign: 'center' }}>
+        {`Reports for Today: ${todayReports}`}
+      </Text>
+      <Text style={{ fontSize: 16, textAlign: 'center' }}>
+        {`Reports for This Week: ${thisWeekReports}`}
+      </Text>
+      <Text style={{ fontSize: 16, textAlign: 'center' }}>
+        {`Reports for This Month: ${thisMonthReports}`}
       </Text>
     </View>
   );
