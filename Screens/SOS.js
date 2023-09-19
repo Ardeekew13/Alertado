@@ -377,8 +377,9 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
     ) : null}
-    <View style={styles.container}>
+   
       {(emergencyType && hasOngoingSOS) || (ongoingSOSData && hasOngoingSOS) ? (
+        <View style={styles.container}>
         <View style={styles.ongoingContainer}>
           <MapView
             style={styles.map}
@@ -416,9 +417,9 @@ useEffect(() => {
             </Text>
           </View>
         </View>
-        
+        </View>   
       ) : null}
-      </View>
+     
     {hasOngoingSOS ? null : (
       <>
           <Text style={styles.text}>

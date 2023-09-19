@@ -1,130 +1,391 @@
+import React, {useState} from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { Alert, View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform, ScrollView } from 'react-native';
+import { collection, doc, setDoc, addDoc, getFirestore } from "firebase/firestore";
+import { db, authentication, storage } from '../firebaseConfig';
+import { Picker } from '@react-native-picker/picker';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { Entypo, Ionicons, Feather } from '@expo/vector-icons';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigation } from '@react-navigation/native';
+import { initializeApp } from '@react-native-firebase/app';
 
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button,SafeAreaView, Alert} from 'react-native';
-import { collection,query,where,doc, getDoc} from 'firebase/firestore';
-import {signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { db,authentication } from '../firebaseConfig';
-import { useNavigation } from '@react-navigation/core';
-import RegistrationForm from './RegistrationForm';
-import { ActivityIndicator } from 'react-native';
-
-export default LoginForm = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [role, setRole]=useState('');
-  const navigation=useNavigation()
-const handleLogin = async () => {
-  setIsLoading(true);
-  try{
-      const userCredential = await signInWithEmailAndPassword(authentication, email, password);
-      const userId = userCredential.user.uid;
-
-      const usersRef = collection(db,'User');
-      const userDoc = await getDoc(doc(usersRef,userId));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-      const userRole = userDoc.data().role;
-      const userStatus = userDoc.data().status
-        if (userRole === "Citizen") {
-          navigation.navigate('BottomTabs');
-          if (userStatus==='Unverified'){
-            Alert.alert(
-              'Account is not verified',
-              'Please verify your account before proceeding.',
-              [{text: 'Verify',
-              onPress: ()=>{
-                navigation.navigate('Citizen Verification');
-              }
-              }]
-            )
-          }
-        } else if (userRole === 'Admin') {
-          navigation.navigate('BottomTabsAdmin');
-        } else if (userRole === 'Police') {
-          navigation.navigate('BottomTabsPolice');
-        } else {
-          setError('User not found');
-        }
-        
-      }
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      if (error.code === 'auth/user-not-found') {
-        setError('User not found');
-      } else if (error.code === 'auth/too-many-requests') {
-        setError('Too many failed login attempts. Try again later');
-      } else {
-        setError('Incorrect email or password');
-      }
-      console.error(error);
-    }
-  };
-const handleRegister = () => {
-  navigation.navigate('RegistrationForm');
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  databaseURL: "YOUR_DATABASE_URL"
 };
 
-  const validateInputs = () => {
-    // Check that email is valid
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    const isEmailValid = emailRegex.test(email);
-    if (!isEmailValid) {
-      setError('Invalid email format');
-    } else {
-      setError(null);
+const roles = ['Citizen', 'Tourist Police',];
+const barangays = ["Alegria",
+"Bicao",
+"Buenavista",
+"Buenos Aires",
+"Calatrava",
+"El Progreso",
+"El Salvador",
+"Guadalupe",
+"Katipunan",
+"La Libertad",
+"La Paz",
+"La Salvacion",
+"La Victoria",
+"Matin-ao",
+"Montehermoso",
+"Montesuerte",
+"Montesunting",
+"Montevideo",
+"Nueva Fuerza",
+"Nueva Vida Este",
+"Nueva Vida Norte",
+"Nueva Vida Sur",
+"Poblacion Norte",
+"Poblacion Sur",
+"Tambo-an",
+"Vallehermoso",
+"Villaflor",
+"Villafuerte",
+"Villacayo",];
+
+const RegistrationForm = () => {
+  const { control, watch, handleSubmit, setValue, formState: { errors } } = useForm();
+  const navigation = useNavigation();
+  const [isSignedIn,setIsSignedIn]=useState(false);
+  const [Fname, setFName] = useState('');
+  const [Lname, setLName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole]=useState('');
+  const [address, setAddress]=useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [emailError, setEmailError]= useState('');
+  const [passwordError, setPasswordError]= useState('');
+  const [roleError, setRoleError]= useState('');
+  const [addressError, setAddressError]= useState('');
+  const [nameError, setNameError]= useState('');
+  const [idImage, setidImage] = useState(null);
+  const [phoneError, setPhoneError]= useState('');
+  const [idError, setIdError]= useState('');
+  const [idProofUrl, setIdProofUrl]= useState(null);
+  const [idProofBlob, setIdProofBlob] = useState(null);
+  const [barangay, setBarangay] = useState('');
+  const [barangayError, setBarangayError] = useState('');
+
+
+  const onSubmit = async (data) => {
+    try {
+      const userCredentials = await createUserWithEmailAndPassword(
+        authentication,
+        data.email,
+        data.password
+      );
+      const user = userCredentials.user;
+  
+      const usersCollection = collection(db, "User");
+      const userDoc = doc(usersCollection, user.uid);
+      await setDoc(userDoc, {
+        email: data.email,
+        Fname: data.Fname,
+        Lname: data.Lname,
+        phone: data.number,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        role: data.role,
+        idProofUrl,
+        address: data.barangay,
+        status: "Unverified",
+      });
+  
+      Alert.alert(
+        'Registered Successfully!', 
+        'You can now log in to your account', 
+        [
+          { text: 'Sign in', onPress: () => navigation.goBack() }
+        ],
+        { justifyContent: 'center', alignItems: 'center', flex: 1 }
+      );
+    } catch (error) {
+      console.log(error);
     }
-  };
+  }
+
   return (
-    
-      <KeyboardAvoidingView behavio={Platform.OS==='ios'? 'padding':'null'} className="flex-1">
-       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-         <View className="flex-1 justify-center bg-white">
-         <Text className="font-bold ml-8 text-m">Welcome
-         </Text>
-         <Text className="ml-8 mt-1">Sign in to continue!</Text>
-     <Image
-        className="w-72 h-32 mb-3 items-center justify-center mx-auto"
-        source={require('./images/alertado.jpg')}
-      />
-        <Text className="ml-5 mb-2 text-sm">Email</Text>
-        <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
-          placeholder="Enter your Email"
-          onChangeText={(email)=>{setEmail(email)}}
-          onBlur={validateInputs}
-        />
-        <Text className="ml-5 mb-2 text-sm">Password</Text>
-        <TextInput
-        className="w-11/12 px-4 py-3 rounded-lg  border-2 border-[#E0E0E0] mx-auto mb-2"
-          placeholder="Enter your Password"
-          onChangeText={(password)=>{setPassword(password)}}
-          secureTextEntry={true}
-          onBlur={validateInputs}
-        />
-        {error? <Text className="color-red-500 mx-auto mb-5 mt-2">{error}</Text>:null}
-        <TouchableOpacity
-          className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-[#E31A1A] items-center mx-auto"
-          onPress={handleLogin}
-          disabled={isLoading}
-        >
-        {isLoading ? (
-          <ActivityIndicator size="large"  color="#FFFFFF" />
-        ) : (
-          <Text className="text-white text-lg font-medium mx-auto">Login</Text>
-        )}
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleRegister}>
-        <Text className="items-center justify-center mx-auto mt-5 text-xl text-[#626161]">Don't have an account? <Text className="text-[#E02424] underline">Sign up</Text></Text>
-      </TouchableOpacity>
-      
-     
-      
-           </View>
-         </TouchableWithoutFeedback>
-       </KeyboardAvoidingView>
+    <ScrollView>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'null'} className="flex-1">
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View className="flex-1 justify-center bg-white">
+            <Image
+              className="w-72 h-32 items-center justify-center mx-auto"
+              source={require('./images/alertado.jpg')}
+            />
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <Text className="ml-5 mb-2 text-sm">First Name</Text>
+                  <TextInput
+                    className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
+                    placeholder="Enter your First Name"
+                    onBlur={onBlur}
+                    onChangeText={(value) => {
+                      if (/^[a-zA-Z]{0,20}$/.test(value)) {
+                        setValue('Fname', value);
+                      } else {
+                        setValue('Fname', '');
+                      }
+                      onChange(value);
+                    }}
+                    value={value}
+                  />
+                  {errors.Fname && <Text className="mx-auto color-red-500">{errors.Fname.message}</Text>}
+                </>
+              )}
+              name="Fname"
+              rules={{
+                required: 'First Name is required',
+                pattern: {
+                  value: /^[a-zA-Z]{0,20}$/,
+                  message: 'Only letters allowed, maximum 20 characters',
+                },
+              }}
+              defaultValue=""
+            />
+
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <Text className="ml-5 mb-2 text-sm  ">Last Name</Text>
+                  <TextInput
+                    className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto"
+                    placeholder="Enter your Last Name"
+                    onBlur={onBlur}
+                    onChangeText={(value) => {
+                      if (/^[a-zA-Z]{0,20}$/.test(value)) {
+                        setValue('Lname', value);
+                      } else {
+                        setValue('Lname', '');
+                      }
+                      onChange(value);
+                    }}
+                    value={value}
+                  />
+                  {errors.Lname && <Text className="mx-auto color-red-500">{errors.Lname.message}</Text>}
+                </>
+              )}
+              name="Lname"
+              rules={{ 
+                required: 'Last Name is required',
+                pattern: {
+                  value: /^[a-zA-Z]{0,20}$/,
+                  message: 'Only letters allowed, maximum 20 characters',
+                },
+               }}
+              defaultValue=""
+            />
+
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <Text className="ml-5 mb-2 text-sm  ">Mobile Number</Text>
+                  <TextInput
+                    className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto"
+                    placeholder="Enter your Mobile Number"
+                    onBlur={onBlur}
+                    onChangeText={(value) => {
+                      setValue('number', value);
+                      onChange(value);
+                    }}
+                    value={value.replace(/[^0-9]/g, '')}
+                    keyboardType="numeric"
+                  />
+                  {errors.number && <Text className="mx-auto color-red-500">{errors.number.message}</Text>}
+                </>
+              )}
+              name="number"
+              rules={{
+                required: 'Mobile Number is required',
+                pattern: {
+                  value: /^[0-9]+$/,
+                  message: 'Only numbers are allowed',
+                },
+                minLength: {
+                  value: 11,
+                  message: 'Mobile Number must be 11 digits long',
+                },
+                maxLength: {
+                  value: 11,
+                  message: 'Mobile Number must be 11 digits long',
+                },
+              }}
+              defaultValue=""
+            />
+
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <Text className="ml-5 mb-2 text-sm">Select Barangay</Text>
+                  <View className="justify-center w-11/12 h-12 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2">
+                    <Picker
+                      selectedValue={barangay}
+                      onValueChange={(value) => {
+                        setBarangay(value);
+                        onChange(value);
+                      }}
+                    >
+                      <Picker.Item label="Barangay" value="" />
+                      {barangays.map((address) => (
+                        <Picker.Item key={address} label={address} value={address} />
+                      ))}
+                    </Picker>
+                  </View>
+                  {errors.barangay && <Text className="mx-auto color-red-500">{errors.barangay.message}</Text>}
+                  {barangayError && <Text className="mx-auto color-red-500">{barangayError}</Text>}
+                </>
+              )}
+              name="barangay"
+              rules={{ required: 'Barangay is required' }}
+              defaultValue=""
+            />
+
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <Text className="ml-5 mb-2 text-sm">Select a Role</Text>
+                  <View className="justify-center w-11/12 h-12 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2">
+                    <Picker
+                      selectedValue={role}
+                      onValueChange={(value) => {
+                        setRole(value);
+                        onChange(value);
+                      }}
+                    >
+                      <Picker.Item label="Role" value="" />
+                      {roles.map((role) => (
+                        <Picker.Item key={role} label={role} value={role} />
+                      ))}
+                    </Picker>
+                  </View>
+                  {errors.role && <Text className="mx-auto color-red-500">{errors.role.message}</Text>}
+                  {roleError && <Text className="mx-auto color-red-500">{roleError}</Text>}
+                </>
+              )}
+              name="role"
+              rules={{ required: 'Role is required' }}
+              defaultValue=""
+            />
+
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <Text className="ml-5 mb-2 text-sm">Email</Text>
+                  <TextInput
+                    className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto"
+                    placeholder="Enter your Email"
+                    onBlur={onBlur}
+                    onChangeText={(value) => {
+                      setValue('email', value);
+                      onChange(value);
+                    }}
+                    value={value}
+                  />
+                  {errors.email && <Text className="mx-auto color-red-500">{errors.email.message}</Text>}
+                </>
+              )}
+              name="email"
+              rules={{
+                required: 'Email is required',
+                pattern: {
+                  value: /^\S+@\S+$/i,
+                  message: 'Invalid email address',
+                },
+              }}
+              defaultValue=""
+            />
+
+            <Controller
+            control={control}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <>
+                <Text className="ml-5 mb-2 text-sm  ">Password</Text>
+                <TextInput
+                  className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
+                  placeholder="Enter your Password"
+                  onBlur={onBlur}
+                  onChangeText={(value) => {
+                    setValue('password', value);
+                    onChange(value);
+                  }}
+                  secureTextEntry={true}
+                  value={value}
+                />  
+                {errors.password && <Text className="mx-auto color-red-500">{errors.password.message}</Text>}
+              </>
+            )}
+            name="password"
+            rules={{ 
+              required: 'Password is required',
+              minLength: {
+                value: 6,
+                message: 'Password must be at least 6 characters long'
+              },
+              validate: (value) => {
+                return value === watch('confirmPassword') || 'Passwords do not match';
+              }
+            }}
+            defaultValue=""
+            />
+
+            <Controller
+            control={control}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <>
+                <Text className="ml-5 mb-2 text-sm  ">Confirm Password</Text>
+                <TextInput
+                  className="w-11/12 px-4 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2"
+                  placeholder="Enter your Password"
+                  onBlur={onBlur}
+                  onChangeText={(value) => {
+                    setValue('confirmPassword', value);
+                    onChange(value);
+                  }}
+                  secureTextEntry={true}
+                  value={value}
+                />  
+                {errors.confirmPassword && <Text className="mx-auto color-red-500">{errors.confirmPassword.message}</Text>}
+              </>
+            )}
+            name="confirmPassword"
+            rules={{ 
+              required: 'Password confirmation is required',
+              validate: (value) => {
+                return value === watch('password') || 'Passwords do not match';
+              }
+            }}
+            defaultValue=""
+            />
+
+            <TouchableOpacity
+              className="w-11/12 mt-4 px-4 py-1 rounded-lg bg-[#E31A1A] items-center mx-auto mb-4"
+              onPress={handleSubmit(onSubmit)}
+            >
+              <Text className="text-white text-lg font-medium mx-auto mb-2">Register</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </ScrollView>
   );
 };
+
+export default RegistrationForm;
