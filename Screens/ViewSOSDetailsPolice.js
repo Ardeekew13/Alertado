@@ -157,8 +157,6 @@ const ViewSOSDetailsPolice = ({ route }) => {
   
       const complaintDoc = querySnapshot.docs[0];
   
-      // Update the status field to "Ongoing"
-      await updateDoc(complaintDoc.ref, { status: 'Ongoing' });
   
       // Get the ID of the currently logged-in police officer
       const auth = getAuth();
@@ -185,7 +183,7 @@ const ViewSOSDetailsPolice = ({ route }) => {
               policeAssignedID:emergency.policeAssignedID,
             });
   
-            console.log('Complaint status updated to "Ongoing" successfully');
+
           } else {
             console.log('User document not found.'); // Handle the case when user document is not found
           }

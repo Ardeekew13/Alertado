@@ -1,14 +1,47 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert, Image } from 'react-native';
 import { doc, addDoc, collection, getDoc, setDoc, runTransaction,getDocs,getFirestore, updateDoc, onSnapshot, query, where } from 'firebase/firestore';
 import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { db } from '../firebaseConfig.js';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/core';
+const CustomMarker = ({ coordinate, zoomLevel }) => {
+  const defaultMarkerSize = 30; // Increase the marker size value
+  const maxZoom = 20;
 
+  const calculateMarkerSize = (zoom) => {
+    const baseSize = defaultMarkerSize * (1 + (1 - zoom / maxZoom));
+    const aspectRatio = originalImageWidth / originalImageHeight;
+    let width, height;
+
+    if (baseSize / aspectRatio > defaultMarkerSize) {
+      width = baseSize;
+      height = baseSize / aspectRatio;
+    } else {
+      width = defaultMarkerSize * aspectRatio;
+      height = defaultMarkerSize;
+    }
+
+    return { width, height };
+  };
+
+  const originalImageWidth = 860; // Replace with the actual width of your image
+  const originalImageHeight = 1060; // Replace with the actual height of your image
+
+  const markerSize = calculateMarkerSize(zoomLevel);
+  return (
+    <Marker coordinate={coordinate}>
+      <Image
+        source={require('./images/SosPIN.png')}
+        style={markerSize}
+        resizeMode="contain" // This ensures the image maintains its aspect ratio and doesn't crop
+      />
+    </Marker>
+  );
+};
 const SOS = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigation = useNavigation();
@@ -19,6 +52,7 @@ const SOS = () => {
   const [userSosLocation, setUserSosLocation] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [policeLocation, setPoliceLocation] = useState(null);
+  const [citizenLocation, setCitizenLocation] = useState(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [userPoliceAssignedData, setUserPoliceAssignedData] = useState(null);
@@ -34,31 +68,15 @@ const SOS = () => {
   const [mapKey, setMapKey] = useState(0);
   const [userData, setUserData] = useState(null);
   const [initialRegion, setInitialRegion] = useState({
-    latitude: 0, // Set default latitude here
-    longitude: 0, // Set default longitude here
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    // Set initial latitude and longitude based on userSosLocation
+    latitude: userSosLocation ? userSosLocation.latitude : 0,
+    longitude: userSosLocation ? userSosLocation.longitude : 0,
+    latitudeDelta: 0.01, // Adjust the zoom level as needed
+    longitudeDelta: 0.01,
   });
+
   const db = getFirestore();
-  useEffect(() => {
-    if (currentLocation) {
-      // Set initialRegion to the currentLocation
-      setInitialRegion({
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
-    } else if (userSosLocation) {
-      // Set initialRegion to the userSosLocation
-      setInitialRegion({
-        latitude: userSosLocation.latitude,
-        longitude: userSosLocation.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
-    }
-  }, [currentLocation, userSosLocation]);
+ 
   const mapRef = useRef(null); // Callback ref for the MapView
 
   const [isMapLayoutReady, setIsMapLayoutReady] = useState(false);
@@ -98,7 +116,11 @@ useEffect(() => {
                     // If it's an ongoing emergency, set the entire sosData
                     ongoingSOSData = sosData;
                     hasOngoingSOS = true;
+                    setPoliceLocation(ongoingSOSData.policeLocation);
+                    setRouteCoordinates(ongoingSOSData.routeCoordinates);
+                    setCitizenLocation(ongoingSOSData.citizenLocation);
                     setUserData(ongoingSOSData);
+                    
                 }
                 if (sosData.status === 'Pending') {
                     hasPendingSOS = true;
@@ -353,11 +375,16 @@ useEffect(() => {
           onLayout={() => setIsMapReady(true)}
           ref={mapRef}
         >
-          {userSosLocation && isMapReady && (
-            <Marker
-              coordinate={userSosLocation}
+        {userSosLocation && isMapReady && (
+          <Marker
+            coordinate={userSosLocation}
+          >
+            <Image
+              source={require('./images/SosPIN.png')} // Replace with the path to your custom marker image
+              style={{ width: 40, height: 43 }} // Adjust the size as needed
             />
-          )}
+          </Marker>
+        )}
           {pingingPosition && userSosLocation && isMapReady && (
             <Circle
               center={userSosLocation}
@@ -387,14 +414,37 @@ useEffect(() => {
             onLayout={() => setIsMapReady(true)}
             ref={mapRef}
           > 
-            {userSosLocation && isMapReady && (
-              <Marker
-                coordinate={userSosLocation}
+          {userSosLocation && isMapReady && (
+            <Marker
+            coordinate={userSosLocation}
+            flat={true} // Ensure the image doesn't tilt with the map
+          >
+              <Image
+                source={require('./images/SosPIN.png')} // Replace with the path to your custom marker image
+                style={{
+                  width: 40,
+                  height: 42, // Use the same dimensions as your custom image
+                  borderRadius: 20,
+                
+                }}
               />
-            )}
+            </Marker>
+          )}
+          {policeLocation && isMapReady && (
+            <Marker coordinate={policeLocation}
+            anchor={{ x: 0.5, y: 0.5 }}>
+              <Image
+                source={require('./images/policeCircle.png')} // Replace with the actual path to your circular image
+                style={{ width: 40, height: 40 }} // Adjust the size as needed
+              />
+            </Marker>
+          )}
             {policeLocation && isMapReady && (
-              <Marker
-                coordinate={policeLocation}
+              <Circle
+                center={policeLocation}
+              radius={500}
+              fillColor="rgba(0, 128, 255, 0.2)"
+              strokeColor="rgba(0, 128, 255, 0.5)"
                 // Add any other marker customization you need
               />
             )}
@@ -422,6 +472,7 @@ useEffect(() => {
      
     {hasOngoingSOS ? null : (
       <>
+      <View style={styles.mainContainer}>
           <Text style={styles.text}>
             Feeling unsafe? Tap SOS alert for immediate help in emergencies. Your safety matters!
           </Text>
@@ -451,6 +502,7 @@ useEffect(() => {
           </View>
         </View>
       </Modal>
+      </View>
       </>
       )}
       {(emergencyType && currentLocation && !isWaitingForPolice) ? (
@@ -534,6 +586,12 @@ useEffect(() => {
 const styles = StyleSheet.create({
   ongoingContainer: {
     flex: 1, 
+  },
+  mainContainer: {
+    flex: 1,
+    justifyContent: 'center', 
+    alignItems: 'center',     
+    marginHorizontal: 5,
   },
  container: {
   ...StyleSheet.absoluteFillObject,

@@ -107,6 +107,7 @@ const ViewComplaints = () => {
       unsubscribeAuth();
     };
   }, []);
+  
   const fetchActiveComplaintsCount = async (userId) => {
     try {
       const db = getFirestore();

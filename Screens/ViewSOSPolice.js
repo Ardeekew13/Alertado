@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@firebase/auth';
+import { Ionicons } from '@expo/vector-icons';
 import { getFirestore, collection, onSnapshot, getDocs, query, where,updateDoc } from '@firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -11,7 +12,9 @@ const ViewSOSPolice = () => {
   const [emergencies, setEmergencies] = useState([]); 
   const [currentUser, setCurrentUser] = useState(null);
   const navigation = useNavigation();
-
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('Active');
+  const filterOptions = ['All', 'Active', 'Pending', 'Ongoing', 'Completed', 'Cancelled'];
 
 
  
@@ -120,7 +123,19 @@ const ViewSOSPolice = () => {
       return `${daysAgo} days ago`;
     }
   };
-
+  const handleFilterChange = (filter) => {
+    setSelectedFilter(filter);
+    setIsFilterOpen(false); // Close the modal when a filter is selected
+  };
+  const filteredEmergencies = () => {
+    if (selectedFilter === 'All') {
+      return emergencies;
+    } else if (selectedFilter === 'Active') {
+      return emergencies.filter(emergency => emergency.status === 'Pending' || emergency.status === 'Ongoing');
+    } else {
+      return emergencies.filter(emergency => emergency.status === selectedFilter);
+    }
+  };
   const handleCancelButtonPress = (emergencyId) => {
     Alert.alert(
       'Cancel Emergency',
@@ -162,7 +177,32 @@ const ViewSOSPolice = () => {
   };
   return (
     <ScrollView className="flex-1">
-      {emergencies.map((emergency) => (
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20 }}>
+  <TouchableOpacity onPress={() => setIsFilterOpen(true)}>
+    <Text style={{ fontSize: 16, color: 'black' }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
+  </TouchableOpacity>
+</View>
+<Modal visible={isFilterOpen} transparent={true} animationType='slide'>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>
+        <TouchableOpacity onPress={() => setIsFilterOpen(false)} style={{ alignItems: 'flex-end' }}>
+        <Ionicons name="ios-close-outline" size={24} color="black" />
+      </TouchableOpacity>
+          {filterOptions.map(filter => (
+            <TouchableOpacity
+              key={filter}
+              onPress={() => handleFilterChange(filter)}
+              style={{ paddingVertical: 8 }}
+            >
+              <Text>{filter}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </Modal>
+   
+
+    {filteredEmergencies().map((emergency) => (
         <View key={emergency.transactionSosId} className="flex flex-col mt-5 ">
           <TouchableOpacity onPress={() => handleClick(emergency)}>
             <View style={styles.emergencyContainer}>

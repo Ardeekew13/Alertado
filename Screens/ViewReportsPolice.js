@@ -77,6 +77,45 @@ const ViewReportsPolice = () => {
       return reports.filter(report => report.status === selectedFilter);
     }
   };
+  const handleCancelButtonPress = (reportId) => {
+    Alert.alert(
+      'Cancel Report',
+      'Are you sure you want to cancel the Report?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm ',
+          style: 'destructive',
+          onPress: () => updateReportStatus(reportId),
+        },
+      ],
+    );
+  };
+
+  const updateReportStatus = async (transactionRepId) => {
+    try {
+      const db = getFirestore();
+      const complaintsRef = collection(db, 'Reports');
+      const querySnapshot = await getDocs(query(complaintsRef, where('transactionRepId', '==', transactionRepId.toString())));
+
+      if (querySnapshot.empty) {
+        console.log('Document not found');
+        return;
+      }
+
+      const complaintDoc = querySnapshot.docs[0];
+
+      // Update the status field to "Cancel"
+      await updateDoc(complaintDoc.ref, { status: 'Cancelled' });
+
+      console.log('Complaint status updated to "Cancel" successfully');
+    } catch (error) {
+      console.log('Error updating complaint status:', error);
+    }
+  };
   return (
     <View className="flex-1">
     <ScrollView >
@@ -122,7 +161,7 @@ const ViewReportsPolice = () => {
     <TouchableOpacity onPress={() => handleClick(report)}>
       <View className="bg-white h-28 mx-4 rounded-lg">
         <Text className="text-lg font-bold ml-2">{report.name}</Text>
-        <TouchableOpacity onPress={() => handleDeleteButtonPress(report.transactionRepId)}>
+        <TouchableOpacity onPress={() => handleCancelButtonPress(report.transactionRepId)}>
         <Text style={{
         fontWeight: 'bold',
         position: 'absolute',

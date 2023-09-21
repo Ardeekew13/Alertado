@@ -73,7 +73,45 @@ const ViewComplaintsPolice = () => {
   const handleClick = (complaint) => {
     navigation.navigate('View Complaint Details Police', { complaint });
   };
+  const handleCancelButtonPress = (complaintId) => {
+    Alert.alert(
+      'Cancel Complaints',
+      'Are you sure you want to cancel the complaints?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm ',
+          style: 'destructive',
+          onPress: () => updateComplaintStatus(complaintId),
+        },
+      ],
+    );
+  };
 
+  const updateComplaintStatus = async (transactionCompId) => {
+    try {
+      const db = getFirestore();
+      const complaintsRef = collection(db, 'Complaints');
+      const querySnapshot = await getDocs(query(complaintsRef, where('transactionCompId', '==', transactionCompId.toString())));
+
+      if (querySnapshot.empty) {
+        console.log('Document not found');
+        return;
+      }
+
+      const complaintDoc = querySnapshot.docs[0];
+
+      // Update the status field to "Cancel"
+      await updateDoc(complaintDoc.ref, { status: 'Cancelled' });
+
+      console.log('Complaint status updated to "Cancel" successfully');
+    } catch (error) {
+      console.log('Error updating complaint status:', error);
+    }
+  };
   return (
     <View className="flex-1">
     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20 }}>

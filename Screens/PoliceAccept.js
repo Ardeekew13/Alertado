@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Button, Image, Text, TextInput  } from 'react-native';
+import { View, StyleSheet, Button, Image, Text, TextInput, ActivityIndicator  } from 'react-native';
 import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import axios from 'axios';
@@ -77,6 +77,7 @@ const PoliceAccept = ({ route }) => {
   const [originalUserSosLocation, setOriginalUserSosLocation] = useState(null);
   const [citizenLocation, setCitizenLocation] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitPressed, setIsSubmitPressed] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [policeFeedback, setPoliceFeedback] = useState('');
@@ -90,10 +91,11 @@ const PoliceAccept = ({ route }) => {
   
   useEffect(() => {
     const fetchOngoingEmergencyData = async () => {
-      if (emergency.status === 'Ongoing') {
+      console.log('gg')
+      if (emergency.status === 'Pending' || emergency.status === 'Ongoing') {
         try {
-          const firestore = getFirestore();
-          const emergenciesRef = collection(firestore, 'Emergencies');
+          const db = getFirestore();
+          const emergenciesRef = collection(db, 'Emergencies');
   
           // Query for the document with a specific transactionSosId
           const querySnapshot = await getDocs(
@@ -104,17 +106,17 @@ const PoliceAccept = ({ route }) => {
             // Document exists, extract the data
             const emergencyDoc = querySnapshot.docs[0].data();
             setSosLocation(emergencyDoc.citizenLocation);
-            console.log(sosLocation);
+            console.log('Soslocat',sosLocation);
             // Check if routeCoordinates, policeLocation, and citizenLocation exist in the document
-            if (emergencyDoc.routeCoordinates && emergencyDoc.policeLocation) {
+            if (emergencyDoc.routeCoordinates && emergencyDoc.policeLocation && emergencyDoc.citizenLocation) {
               // Extract the data
-              const { routeCoordinates, policeLocation } = emergencyDoc;
+              const { routeCoordinates, policeLocation, citizenLocation} = emergencyDoc;
   
               // Update the state variables with the fetched data
               setRouteCoordinates(routeCoordinates);
               setPoliceLocation(policeLocation);
-  
-              console.log(emergencyDoc.citizenLocation, policeLocation);
+              setCitizenLocation(citizenLocation);
+              console.log('police loc', policeLocation);
               // Set directionsFetched to true since routeCoordinates exist
               setDirectionsFetched(true);
             } else {
@@ -177,7 +179,8 @@ const PoliceAccept = ({ route }) => {
                 latitude: policeLocation.latitude,
                 longitude: policeLocation.longitude,
                 
-              },  
+              }, 
+              status:'Ongoing', 
               
             });
          
@@ -337,8 +340,14 @@ const PoliceAccept = ({ route }) => {
       {policeLocation && (
         <Marker
           coordinate={policeLocation}
+          anchor={{ x: 0.5, y: 0.5 }}
           title="Police"
-        />
+        >
+        <Image
+      source={require('./images/policeCircle.png')} // Replace with the actual path to your circular image
+      style={{ width: 40, height: 43}} // Adjust the size as needed
+    />
+    </Marker>
       )}
   
       {/* Render a custom marker for citizenLocation (or sosLocation) */}
@@ -346,12 +355,13 @@ const PoliceAccept = ({ route }) => {
         <CustomMarker
           coordinate={sosLocation}
           zoomLevel={zoomLevel} // If needed, adjust the zoom level
+          title="Citizen"
         />
       )}
-      {sosLocation && (
+      {policeLocation && (
         <Circle
-          center={sosLocation}
-          radius={500}
+          center={policeLocation}
+          radius={300}
           fillColor="rgba(0, 128, 255, 0.2)"
           strokeColor="rgba(0, 128, 255, 0.5)"
         />
@@ -383,7 +393,12 @@ const PoliceAccept = ({ route }) => {
         title="Police"
         draggable
         onDragEnd={handlePoliceMarkerDragEnd}
-      />
+      >
+      <Image
+      source={require('./images/PolicePin.png')} // Replace with the actual path to your circular image
+      style={{ width: 40, height: 43}} // Adjust the size as needed
+    />
+      </Marker>
     )}
     {sosLocation && (
       <Circle
@@ -394,10 +409,14 @@ const PoliceAccept = ({ route }) => {
       />
     )}
     {sosLocation && (
-      <CustomMarker
-        coordinate={sosLocation}
-        zoomLevel={zoomLevel}
-      />
+      <Marker 
+      coordinate={sosLocation}
+           >
+              <Image
+                source={require('./images/SosPIN.png')} // Replace with the actual path to your circular image
+                style={{ width: 40, height: 42}} // Adjust the size as needed
+              />
+            </Marker>
     )}
     
     {routeCoordinates && (
@@ -411,14 +430,20 @@ const PoliceAccept = ({ route }) => {
     )}
     {!directionsFetched ? (
       <Button
-        title="Submit"
-        onPress={async () => {
-          console.log('Submit button clicked.');
-          setIsSubmitPressed(true);
-          await savePoliceLocationToFirestore(); 
-          fetchDirectionsGeoapify();
-        }}
-      />
+  title={isProcessing ? 'Processing...' : 'Submit'}
+  onPress={async () => {
+    console.log('Submit button clicked.');
+    setIsSubmitPressed(true);
+    setIsProcessing(true); // Set isProcessing to true when the button is clicked
+
+    // Your asynchronous operations here
+    await savePoliceLocationToFirestore();
+    fetchDirectionsGeoapify();
+
+    setIsProcessing(false); // Set isProcessing back to false when the operations are done
+  }}
+  disabled={isProcessing} // Disable the button when it's processing
+/>
     ) : (
       <View style={styles.directionsContainer}>
         <Text style={styles.helpText}>Help is on the way</Text>
