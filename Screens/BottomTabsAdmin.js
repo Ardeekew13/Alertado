@@ -1,11 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AdminHomepage from './AdminHomepage';
-import { Entypo } from '@expo/vector-icons'; 
 import { NavigationContainer } from '@react-navigation/native';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Entypo,MaterialCommunityIcons,AntDesign,FontAwesome5,Octicons, Ionicons  } from '@expo/vector-icons'; 
+import ViewReportsAdmin from './ViewReportsAdmin';
+import ViewComplaintsAdmin from './ViewComplaintsAdmin';
+import ViewSOSAdmin from './ViewSOSAdmin'
 import AdminVerify from './AdminVerify';
 import AdminCreateAccount from './AdminCreateAccount';
-import ViewSOSAdmin from './ViewSOSAdmin';
 
 
 
@@ -35,7 +36,41 @@ function BottomTabsAdmin(){
       options={{
         tabBarLabel: 'Home',
         tabBarIcon: ({ color, size }) => (
-          <Entypo name="home" size={24} color="black" />
+          <AntDesign name="home" size={24} color={color} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="View Reports"
+      component={ViewReportsAdmin}
+      options={{
+        tabBarLabel: 'Reports',
+        tabBarIcon: ({ color, size }) => (
+          <AntDesign name="file1" size={22} color={color} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="View Complaints Admin"
+      component={ViewComplaintsAdmin}
+      options={{
+        tabBarLabel: 'Complaints',
+        tabBarIcon: ({ color, size }) => (
+          <Octicons name="report" size={22} color={color} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="View SOS Admin"
+      component={ViewSOSAdmin}
+      options={{
+        tabBarLabel: 'SOS',
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons
+            name="notifications-outline"
+            size={27}
+            color={color}
+          />
         ),
       }}
     />
@@ -45,7 +80,7 @@ function BottomTabsAdmin(){
       options={{
         tabBarLabel: 'Verify',
         tabBarIcon: ({ color, size }) => (
-          <Entypo name="user" size={24} color="black" />
+          <AntDesign name="addusergroup" size={24} color={color} />
         ),
       }}
     />
@@ -55,25 +90,10 @@ function BottomTabsAdmin(){
       options={{
         tabBarLabel: 'Settings',
         tabBarIcon: ({ color, size }) => (
-          <Ionicons name="settings" size={24} color="black" />
+          <AntDesign name="setting" size={24} color={color} />
         ),
       }}
     />
-    <Tab.Screen
-    name="View SOS"
-    component={ViewSOSAdmin}
-    options={{
-      tabBarLabel: 'SOS',
-      tabBarIcon: ({ color, size }) => (
-        <Ionicons
-          name="notifications-outline"
-          size={27}
-          color={color}
-        />
-      ),
-    }}
-  />
-    
   </Tab.Navigator>  
   );
 }

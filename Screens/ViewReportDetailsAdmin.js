@@ -21,6 +21,7 @@ const ViewReportDetailsAdmin = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newStatus, setNewStatus] = useState(report.status);
   const [loading, setLoading] = useState(false);
+  const [temporaryStatus, setTemporaryStatus] = useState(report.status);
   const [reportColor, setReportColor] = useState('black')
   useEffect(() => {
     if (newStatus === 'Pending') {
@@ -89,14 +90,14 @@ const ViewReportDetailsAdmin = ({ route }) => {
         const reportDoc = querySnapshot.docs[0];
         const reportRef = doc(firestore, 'Reports', reportDoc.id);
   
-        await updateDoc(reportRef, { status: newStatus });
+        await updateDoc(reportRef, { status: temporaryStatus });
   
         console.log('Report status updated successfully');
         setModalVisible(false);
-        setNewStatus(newStatus);
+        setNewStatus(temporaryStatus);
   
         // Update the status property of the report directly
-        report.status = newStatus;
+        report.status = temporaryStatus;
       } else {
         console.log('Document with transactionRepId does not exist');
       }
@@ -223,44 +224,43 @@ const ViewReportDetailsAdmin = ({ route }) => {
           <Ionicons name="ios-close-outline" size={24} color="black" />
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Pending')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Pending')}>
+        <Text
+          style={[
+            styles.statusOption,
+            temporaryStatus === 'Pending' && styles.selectedStatusOption,
+          ]}
+        >
+          Pending
+        </Text>
+      </TouchableOpacity>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Ongoing')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Pending' && styles.selectedStatusOption,
-            ]}
-          >
-            Pending
-          </Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={() => setNewStatus('Ongoing')}>
-          <Text
-            style={[
-              styles.statusOption,
-              newStatus === 'Ongoing' && styles.selectedStatusOption,
+              temporaryStatus  === 'Ongoing' && styles.selectedStatusOption,
             ]}
           >
             Ongoing
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Completed')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Completed')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Completed' && styles.selectedStatusOption,
+              temporaryStatus  === 'Completed' && styles.selectedStatusOption,
             ]}
           >
             Completed
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Cancelled')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Cancelled')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Cancelled' && styles.selectedStatusOption,
+              temporaryStatus  === 'Cancelled' && styles.selectedStatusOption,
             ]}
           >
             Cancel

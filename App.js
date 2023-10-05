@@ -1,5 +1,5 @@
 
-import { View, Text, Alert, Button } from 'react-native';
+import { View, Text, Alert, Button, Platform, Linking } from 'react-native';
 import React, {useEffect, useState} from 'react'
 import RegistrationForm from './Screens/RegistrationForm'
 import { NavigationContainer } from '@react-navigation/native'
@@ -11,6 +11,7 @@ import FileComplaint from './Screens/FileComplaint'
 import ProfilePage from './Screens/ProfilePage'
 import ProfilePagePolice from './Screens/ProfilePagePolice'
 import BottomTabs from './Screens/BottomTabs'
+import NetworkInfo from 'react-native-network-info';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AdminVerify from './Screens/AdminVerify'
 import AdminCreateAccount from './Screens/AdminCreateAccount'
@@ -44,6 +45,7 @@ import FailedVerification from './Screens/FailedVerification'
 import { Ionicons } from '@expo/vector-icons';
 import GenerateStat from './Screens/GenerateStat'
 import NetInfo from '@react-native-community/netinfo';
+import call from 'react-native-phone-call'
 
 const Stack = createNativeStackNavigator();
 
@@ -59,7 +61,11 @@ export default function App() {
   
   const checkInternetConnection = async () => {
     const netInfo = await NetInfo.fetch();
-    if (!netInfo.isConnected) {
+    const args = {number:'911',
+                  prompt:false,
+                  skipCanOpen:true         }
+    console.log(netInfo)
+    if (!netInfo.isWifiEnabled) {
       Alert.alert(
         'No Internet Connection',
         'You are not connected to the internet. Please open Wi-Fi or cellular data to use the app.',
@@ -67,14 +73,9 @@ export default function App() {
           {
             text: 'Call 911',
             onPress: () => {
-              // Implement code to call 911 here (platform-specific)
               if (Platform.OS === 'android') {
-                // For Android, you can use the following code to initiate a phone call
-                Linking.openURL('tel:911');
-              } else if (Platform.OS === 'ios') {
-                // For iOS, you can use the following code to initiate a phone call
-                Linking.openURL('tel:911');
-              }
+                call(args).catch(console.error)
+              } 
             },
           },
           {
@@ -82,12 +83,6 @@ export default function App() {
             onPress: () => {
               // Implement code to open device settings (Wi-Fi/Data settings) here (platform-specific)
               if (Platform.OS === 'android') {
-                // For Android, you can open the network settings
-                IntentLauncher.startActivityAsync(
-                  IntentLauncher.ACTION_NETWORK_OPERATOR_SETTINGS
-                );
-              } else if (Platform.OS === 'ios') {
-                // For iOS, you can open the Wi-Fi settings
                 Linking.openSettings();
               }
             },
@@ -118,6 +113,7 @@ export default function App() {
       unsubscribe();
     };
   }, []);
+  
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName='LoginForm'>
