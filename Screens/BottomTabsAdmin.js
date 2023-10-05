@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import AdminVerify from './AdminVerify';
 import AdminCreateAccount from './AdminCreateAccount';
+import ViewSOSAdmin from './ViewSOSAdmin';
 
 
 
@@ -58,6 +59,21 @@ function BottomTabsAdmin(){
         ),
       }}
     />
+    <Tab.Screen
+    name="View SOS"
+    component={ViewSOSAdmin}
+    options={{
+      tabBarLabel: 'SOS',
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons
+          name="notifications-outline"
+          size={27}
+          color={color}
+        />
+      ),
+    }}
+  />
+    
   </Tab.Navigator>  
   );
 }

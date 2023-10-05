@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/core';
 import ReportCrime from './ReportCrime'
 import { View, Text, Image, Button, TouchableOpacity,TextInput, Alert, Modal, ScrollView} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, doc, onSnapshot, getFirestore,updateDoc,getDoc } from '@firebase/firestore';
+import { collection, doc, onSnapshot, getFirestore,updateDoc,getDoc, query , getDocs} from '@firebase/firestore';
 import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
 import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} from 'firebase/storage';
 import firebaseConfig from '../firebaseConfig';
@@ -49,6 +49,7 @@ onAuthStateChanged(auth, (user) => {
 });
 const AdminHomePage = ()=>{
   const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [barangayCounts, setBarangayCounts] = useState({});
   const [totalReportsCount, setTotalReportsCount] = useState(0);
   const [totalComplaintsCount, setTotalComplaintsCount] = useState(0);
@@ -146,15 +147,15 @@ const AdminHomePage = ()=>{
            <Text className="text-[#817E7E] text-md">Check your activities in this dashboard</Text>
       </View>
       <View className="m-5 bg-white rounded-md p-5">
-        <Text className ="font-bold text-base ">0</Text>
+        <Text className ="font-bold text-base ">{totalReportsCount}</Text>
         <Text className ="font-bold text-base">Crime</Text>
       </View>
       <View className="mx-5 bg-white p-5 rounded-md">
-        <Text className ="font-bold text-base">0</Text>
+        <Text className ="font-bold text-base">{totalEmergenciesCount}</Text>
         <Text className ="font-bold text-base">Emergency</Text>
       </View>
       <View className="m-5 bg-white p-5 rounded-md">
-        <Text className ="font-bold text-base">0</Text>
+        <Text className ="font-bold text-base">{totalComplaintsCount}</Text>
         <Text className ="font-bold text-base">Complaint</Text>
       </View>
       <View className="border-0.5 mx-5"></View>

@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Button, Image, Text, TextInput, ActivityIndicator  } from 'react-native';
+import { View, StyleSheet, Button, Image, Text, TextInput, ActivityIndicator, TouchableOpacity, Alert    } from 'react-native';
 import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import { collection, onSnapshot, doc, setDoc,getDocs, getDoc, getFirestore, updateDoc, query, where, addDoc} from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import firebaseConfig, { db } from '../firebaseConfig';
-import { TouchableOpacity } from 'react-native-gesture-handler';
 import { getAuth, onAuthStateChanged } from '@firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
-const CustomMarker = ({ coordinate, zoomLevel }) => {
+const CustomMarker = ({ coordinate, zoomLevel, isPinned }) => {
   const defaultMarkerSize = 30; // Increase the marker size value
   const maxZoom = 20;
 
@@ -77,6 +77,7 @@ const PoliceAccept = ({ route }) => {
   const [originalUserSosLocation, setOriginalUserSosLocation] = useState(null);
   const [citizenLocation, setCitizenLocation] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [policeRealTimeLocation, setPoliceRealTimeLocation] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitPressed, setIsSubmitPressed] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
@@ -87,8 +88,69 @@ const PoliceAccept = ({ route }) => {
   const [directionsFetched, setDirectionsFetched] = useState(false);
 
   const [directionData, setDirectionData] = useState(null);
+  const navigation = useNavigation();
+   useEffect(() => {
+    let isMounted = true;
 
-  
+    const startPoliceLocationTracking = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const locationOptions = {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000, // Update location every 1 second (adjust as needed)
+        };
+
+        const locationSubscriber = await Location.watchPositionAsync(
+          locationOptions,
+          async (location) => {
+            if (isMounted) {
+              // Update the police's real-time location
+              const newLocation = {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+              };
+              setPoliceLocation(newLocation);
+
+              // Save the police's real-time location to Firebase Firestore
+              try {
+                const db = getFirestore();
+                const emergenciesRef = collection(db, 'Emergencies');
+                
+                // Query for the document with a specific transactionSosId
+                const querySnapshot = await getDocs(
+                  query(emergenciesRef, where('transactionSosId', '==', emergency.transactionSosId))
+                );
+
+                if (!querySnapshot.empty) {
+                  // Document exists, update it
+                  const emergencyDocRef = querySnapshot.docs[0].ref;
+                  await updateDoc(emergencyDocRef, {
+                    policeLocation: {
+                      latitude: newLocation.latitude,
+                      longitude: newLocation.longitude,
+                    },
+                  });
+
+                  
+                } else {
+                  console.log('Emergency document does not exist.');
+                }
+              } catch (error) {
+                console.error('Error updating police location:', error);
+              }
+            }
+          }
+        );
+      }
+    };
+
+    startPoliceLocationTracking();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => {
     const fetchOngoingEmergencyData = async () => {
       console.log('gg')
@@ -170,7 +232,6 @@ const PoliceAccept = ({ route }) => {
           const querySnapshot = await getDocs(
             query(emergenciesRef, where('transactionSosId', '==', emergency.transactionSosId))
           );
-          console.log('Police Loc',transactionSosId)
           if (!querySnapshot.empty) {
             // Document exists, update it
             const emergencyDocRef = querySnapshot.docs[0].ref;
@@ -201,52 +262,106 @@ const PoliceAccept = ({ route }) => {
     setPoliceLocation({ latitude, longitude });
 
   };
-  const handleSendFeedback = async () => {
-    try {
-      const firestore = getFirestore();
-      const emergencyDocRef = doc(firestore, 'Emergencies', emergency.transactionSosId);
+ const handlePressFeedback = async () => {
+  try {
+    const firestore = getFirestore();
+    const emergenciesRef = collection(firestore, 'Emergencies');
 
-      // Update the "policeFeedback" field in the Firestore document
+    // Query for the document with a specific transactionSosId
+    const querySnapshot = await getDocs(
+      query(emergenciesRef, where('transactionSosId', '==', emergency.transactionSosId))
+    );
+
+    if (!querySnapshot.empty) {
+      // Document exists, update the "policeFeedback" field
+      const emergencyDocRef = querySnapshot.docs[0].ref;
       await updateDoc(emergencyDocRef, { policeFeedback });
 
+      // Show an alert that the feedback was sent
+      Alert.alert('Feedback Sent', 'Your feedback has been sent successfully.');
+
+      // Clear the feedback input field
+      setPoliceFeedback('');
+
       console.log('Sent');
-    } catch (error) {
-      // Handle unexpected errors
-      console.error('Error sending feedback:', error);
-      // Display an error message to the user or handle the error accordingly
+    } else {
+      console.log('Emergency document with the given transactionSosId does not exist.');
     }
-  };
+  } catch (error) {
+    // Handle unexpected errors
+    console.error('Error sending feedback:', error);
+    // Display an error message to the user or handle the error accordingly
+  }
+};
   const handleComplete = async () => {
     try {
       const firestore = getFirestore();
-      const emergencyDocRef = doc(firestore, 'Emergencies', emergency.transactionSosId);
-
-      // Update the "status" field to "Completed" in the Firestore document
-      await updateDoc(emergencyDocRef, { status: 'Completed' });
-
-      console.log('completed');
+      const emergenciesRef = collection(firestore, 'Emergencies');
+  
+      // Query for the document with a specific transactionSosId
+      const querySnapshot = await getDocs(
+        query(emergenciesRef, where('transactionSosId', '==', emergency.transactionSosId))
+      );
+  
+      if (!querySnapshot.empty) {
+        // Document exists, update the "status" field to "Completed"
+        const emergencyDocRef = querySnapshot.docs[0].ref;
+        await updateDoc(emergencyDocRef, { status: 'Completed' });
+        console.log('Status updated to Completed');
+      } else {
+        console.log('Emergency document with the given transactionSosId does not exist.');
+      }
     } catch (error) {
       // Handle unexpected errors
       console.error('Error updating status to Completed:', error);
       // Display an error message to the user or handle the error accordingly
     }
   };
+  
   const handleCancel = async () => {
-    try {
-      const firestore = getFirestore();
-      const emergencyDocRef = doc(firestore, 'Emergencies', emergency.transactionSosId);
+    // Show an alert to confirm cancellation
+    Alert.alert(
+      'Confirm Cancellation',
+      'Are you sure you want to cancel this emergency?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              const firestore = getFirestore();
+              const emergenciesRef = collection(firestore, 'Emergencies');
+  
+              // Query for the document with a specific transactionSosId
+              const querySnapshot = await getDocs(
+                query(emergenciesRef, where('transactionSosId', '==', emergency.transactionSosId))
+              );
+  
+              if (!querySnapshot.empty) {
+                // Document exists, update the "status" field to "Cancelled"
+                const emergencyDocRef = querySnapshot.docs[0].ref;
+                await updateDoc(emergencyDocRef, { status: 'Cancelled' });
+                console.log('Status updated to Cancelled');
+  
+                navigation.navigate('ViewSOSPolice');
+              } else {
+                console.log('Emergency document with the given transactionSosId does not exist.');
+              }
+            } catch (error) {
+              // Handle unexpected errors
+              console.error('Error updating status to Cancelled:', error);
+              // Display an error message to the user or handle the error accordingly
+            } finally {
 
-      // Update the "status" field to "Cancelled" in the Firestore document
-      await updateDoc(emergencyDocRef, { status: 'Cancelled' });
-
-      console.log('completed');
-    } catch (error) {
-      // Handle unexpected errors
-      console.error('Error updating status to Completed:', error);
-      // Display an error message to the user or handle the error accordingly
-    }
+            }
+          },
+        },
+      ]
+    );
   };
-
   const fetchDirectionsGeoapify = async () => {
     if (!policeLocation || !userSosLocation) return;
   
@@ -316,60 +431,60 @@ const PoliceAccept = ({ route }) => {
     <View style={{ flex: 1 }}>
     {directionsFetched ? (
       <View style={{ flex: 1 }}>
-      <MapView
-      ref={mapRef}
-      style={styles.map}
-      initialRegion={{
-        // Set the initial region for the new MapView here
-        latitude: (routeCoordinates[0] && routeCoordinates[0].latitude) || 0,
-        longitude: (routeCoordinates[0] && routeCoordinates[0].longitude) || 0,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }}
-    >
-      {/* Render the Polyline */}
-      {routeCoordinates && (
-        <Polyline
-          coordinates={routeCoordinates}
-          strokeColor="blue"
-          strokeWidth={4}
-        />
-      )}
-  
-      {/* Render a marker for policeLocation */}
-      {policeLocation && (
-        <Marker
-          coordinate={policeLocation}
-          anchor={{ x: 0.5, y: 0.5 }}
-          title="Police"
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          initialRegion={{
+            // Set the initial region for the new MapView here
+            latitude: (routeCoordinates[0] && routeCoordinates[0].latitude) || 0,
+            longitude: (routeCoordinates[0] && routeCoordinates[0].longitude) || 0,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
         >
-        <Image
-      source={require('./images/policeCircle.png')} // Replace with the actual path to your circular image
-      style={{ width: 40, height: 43}} // Adjust the size as needed
-    />
-    </Marker>
-      )}
-  
-      {/* Render a custom marker for citizenLocation (or sosLocation) */}
-      {sosLocation && (
-        <CustomMarker
-          coordinate={sosLocation}
-          zoomLevel={zoomLevel} // If needed, adjust the zoom level
-          title="Citizen"
-        />
-      )}
-      {policeLocation && (
-        <Circle
-          center={policeLocation}
-          radius={300}
-          fillColor="rgba(0, 128, 255, 0.2)"
-          strokeColor="rgba(0, 128, 255, 0.5)"
-        />
-      )}
-  
-    </MapView>
-
-  </View>
+          {/* Render the Polyline */}
+          {routeCoordinates && (
+            <Polyline
+              coordinates={routeCoordinates}
+              strokeColor="blue"
+              strokeWidth={4}
+            />
+          )}
+    
+    
+          {/* Render a custom marker for citizenLocation (or sosLocation) */}
+          {sosLocation && (
+            <CustomMarker
+              coordinate={sosLocation}
+              zoomLevel={zoomLevel} // If needed, adjust the zoom level
+              title="Citizen"
+            />
+          )}
+    
+          {/* Render a marker for policeRealTimeLocation */}
+          {policeLocation && (
+            <Marker
+              coordinate={policeLocation}
+              anchor={{ x: 0.5, y: 0.5 }}
+              title="Police (Real Time)"
+            >
+              <Image
+                source={require('./images/policeCircle.png')} // Replace with the actual path to your real-time police marker image
+                style={{ width: 40, height: 43 }} // Adjust the size as needed
+              />
+            </Marker>
+          )}
+    
+          {policeLocation && (
+            <Circle
+              center={policeLocation}
+              radius={300}
+              fillColor="rgba(0, 128, 255, 0.2)"
+              strokeColor="rgba(0, 128, 255, 0.5)"
+            />
+          )}
+        </MapView>
+      </View>
     ) : (
       
       // Render the original MapView while directions are not fetched
@@ -453,9 +568,11 @@ const PoliceAccept = ({ route }) => {
           onChangeText={(text) => setPoliceFeedback(text)}
           value={policeFeedback}
         />
-        <TouchableOpacity onPress={handleSendFeedback}>
-          <Text>Send Feedback</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={handlePressFeedback}>
+        <View style={styles.sendFeedbackButton}>
+          <Text style={styles.sendFeedbackText}>Send Feedback</Text>
+        </View>
+      </TouchableOpacity>
         <View style={styles.directionsButtonsContainer}>
           <View style={styles.directionsButton}>
             <Button title="Complete" onPress={handleComplete} color="green" />
@@ -476,8 +593,15 @@ const styles = StyleSheet.create({
   },
   directionsContainer: {
     flex: 1,
+    justifyContent: 'center', // Align the content at the top
+    height: 40,
+    color: 'white',
+    borderTopEndRadius: 5,
+  },
+  directionsHeader: {
+    flex: 1,
     justifyContent: 'flex-start', // Align the content at the top
-    height: 50,
+    height: 40,
   },
   directionsButtonsContainer: {
     flexDirection: 'row',
@@ -493,7 +617,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 16,
+    marginBottom:20,
   },
   feedbackInputContainer: {
     alignItems: 'flex-start', // Align input container content at the top
@@ -512,6 +636,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     height: 100,
     marginTop: 5,
+  },
+  sendFeedbackButton: {
+    backgroundColor: '#08BAE1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderRadius: 5, 
+    marginHorizontal: 10,
+  },
+  sendFeedbackText: {
+    color: 'white', 
+    fontSize: 16, 
+    fontWeight: 'bold',
   },
 });
 

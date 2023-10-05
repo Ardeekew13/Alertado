@@ -1,6 +1,6 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import './firebaseConfig'
+
+import { View, Text, Alert, Button } from 'react-native';
+import React, {useEffect, useState} from 'react'
 import RegistrationForm from './Screens/RegistrationForm'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -35,12 +35,15 @@ import ViewComplaintDetailsPolice from './Screens/ViewComplaintDetailsPolice'
 import ViewComplaintDetailsAdmin from './Screens/ViewComplaintsDetailsAdmin'
 import PoliceHomepage from './Screens/PoliceHomepage'
 import ViewSOSPolice from './Screens/ViewSOSPolice'
+import ViewSOSAdmin from './Screens/ViewSOSAdmin'
 import ViewSOSDetailsPolice from './Screens/ViewSOSDetailsPolice'
+import ViewSOSDetailsAdmin from './Screens/ViewSOSDetailsAdmin'
 import PoliceAccept from './Screens/PoliceAccept'
 import PendingVerification from './Screens/PendingVerification'
 import FailedVerification from './Screens/FailedVerification'
 import { Ionicons } from '@expo/vector-icons';
 import GenerateStat from './Screens/GenerateStat'
+import NetInfo from '@react-native-community/netinfo';
 
 const Stack = createNativeStackNavigator();
 
@@ -50,6 +53,71 @@ const LogoHeader = () => {
   );
 };
 export default function App() {
+  const [isConnected, setIsConnected] = useState(null);
+
+ 
+  
+  const checkInternetConnection = async () => {
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'You are not connected to the internet. Please open Wi-Fi or cellular data to use the app.',
+        [
+          {
+            text: 'Call 911',
+            onPress: () => {
+              // Implement code to call 911 here (platform-specific)
+              if (Platform.OS === 'android') {
+                // For Android, you can use the following code to initiate a phone call
+                Linking.openURL('tel:911');
+              } else if (Platform.OS === 'ios') {
+                // For iOS, you can use the following code to initiate a phone call
+                Linking.openURL('tel:911');
+              }
+            },
+          },
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              // Implement code to open device settings (Wi-Fi/Data settings) here (platform-specific)
+              if (Platform.OS === 'android') {
+                // For Android, you can open the network settings
+                IntentLauncher.startActivityAsync(
+                  IntentLauncher.ACTION_NETWORK_OPERATOR_SETTINGS
+                );
+              } else if (Platform.OS === 'ios') {
+                // For iOS, you can open the Wi-Fi settings
+                Linking.openSettings();
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  };
+
+  useEffect(() => {
+    console.log('Inside useEffect');
+    checkInternetConnection();
+
+    // Add the NetInfo subscription here
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      console.log('Connection type:', state.type);
+      console.log('Is connected?', state.isConnected);
+      setIsConnected(state.isConnected);
+    });
+
+    return () => {
+      // Clean up the subscription when the component unmounts
+      unsubscribe();
+    };
+  }, []);
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName='LoginForm'>
@@ -147,6 +215,18 @@ export default function App() {
          component={ViewSOSDetailsPolice}
          options={{
           title: 'View SOS Details',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="View SOS Details Admin"
+         component={ViewSOSDetailsAdmin}
+         options={{
+          title: 'View SOS Details Admin',
           headerStyle: {
             backgroundColor: '#FE0000',
           },
@@ -255,6 +335,18 @@ export default function App() {
          <Stack.Screen
          name="ViewSOSPolice"
          component={ViewSOSPolice}
+         options={{
+          title: 'View SOS',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="ViewSOSAdmin"
+         component={ViewSOSAdmin}
          options={{
           title: 'View SOS',
           headerStyle: {
