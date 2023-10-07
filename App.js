@@ -1,5 +1,6 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+
+import { View, Text, Alert, Button, Platform, Linking } from 'react-native';
+import React, {useEffect, useState} from 'react'
 import RegistrationForm from './Screens/RegistrationForm'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -10,6 +11,7 @@ import FileComplaint from './Screens/FileComplaint'
 import ProfilePage from './Screens/ProfilePage'
 import ProfilePagePolice from './Screens/ProfilePagePolice'
 import BottomTabs from './Screens/BottomTabs'
+import NetworkInfo from 'react-native-network-info';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AdminVerify from './Screens/AdminVerify'
 import AdminCreateAccount from './Screens/AdminCreateAccount'
@@ -34,12 +36,16 @@ import ViewComplaintDetailsPolice from './Screens/ViewComplaintDetailsPolice'
 import ViewComplaintDetailsAdmin from './Screens/ViewComplaintsDetailsAdmin'
 import PoliceHomepage from './Screens/PoliceHomepage'
 import ViewSOSPolice from './Screens/ViewSOSPolice'
+import ViewSOSAdmin from './Screens/ViewSOSAdmin'
 import ViewSOSDetailsPolice from './Screens/ViewSOSDetailsPolice'
+import ViewSOSDetailsAdmin from './Screens/ViewSOSDetailsAdmin'
 import PoliceAccept from './Screens/PoliceAccept'
 import PendingVerification from './Screens/PendingVerification'
 import FailedVerification from './Screens/FailedVerification'
 import { Ionicons } from '@expo/vector-icons';
 import GenerateStat from './Screens/GenerateStat'
+import NetInfo from '@react-native-community/netinfo';
+import call from 'react-native-phone-call'
 
 const Stack = createNativeStackNavigator();
 
@@ -49,6 +55,65 @@ const LogoHeader = () => {
   );
 };
 export default function App() {
+  const [isConnected, setIsConnected] = useState(null);
+
+ 
+  
+  const checkInternetConnection = async () => {
+    const netInfo = await NetInfo.fetch();
+    const args = {number:'911',
+                  prompt:false,
+                  skipCanOpen:true         }
+    console.log(netInfo)
+    if (!netInfo.isWifiEnabled) {
+      Alert.alert(
+        'No Internet Connection',
+        'You are not connected to the internet. Please open Wi-Fi or cellular data to use the app.',
+        [
+          {
+            text: 'Call 911',
+            onPress: () => {
+              if (Platform.OS === 'android') {
+                call(args).catch(console.error)
+              } 
+            },
+          },
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              // Implement code to open device settings (Wi-Fi/Data settings) here (platform-specific)
+              if (Platform.OS === 'android') {
+                Linking.openSettings();
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  };
+
+  useEffect(() => {
+    console.log('Inside useEffect');
+    checkInternetConnection();
+
+    // Add the NetInfo subscription here
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      console.log('Connection type:', state.type);
+      console.log('Is connected?', state.isConnected);
+      setIsConnected(state.isConnected);
+    });
+
+    return () => {
+      // Clean up the subscription when the component unmounts
+      unsubscribe();
+    };
+  }, []);
+  
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName='LoginForm'>
@@ -146,6 +211,18 @@ export default function App() {
          component={ViewSOSDetailsPolice}
          options={{
           title: 'View SOS Details',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="View SOS Details Admin"
+         component={ViewSOSDetailsAdmin}
+         options={{
+          title: 'View SOS Details Admin',
           headerStyle: {
             backgroundColor: '#FE0000',
           },
@@ -254,6 +331,18 @@ export default function App() {
          <Stack.Screen
          name="ViewSOSPolice"
          component={ViewSOSPolice}
+         options={{
+          title: 'View SOS',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
+         />
+         <Stack.Screen
+         name="ViewSOSAdmin"
+         component={ViewSOSAdmin}
          options={{
           title: 'View SOS',
           headerStyle: {

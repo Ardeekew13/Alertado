@@ -8,7 +8,9 @@ import {
   Alert,
   Image,
   Animated,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  Button,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import  MapView, {Marker, Circle } from 'react-native-maps';
@@ -43,7 +45,7 @@ const CustomMarkerImage = () => (
   <Image source={require('./images/SosPIN.png')} style={styles.customMarkerImage} />
 );
 
-const ViewSOSDetailsPolice = ({ route }) => {
+const ViewSOSDetailsAdmin = ({ route }) => {
   const { emergency } = route.params;
   const emergencyId = emergency.id;
   const [mapReady, setMapReady] = useState(false);
@@ -56,7 +58,8 @@ const ViewSOSDetailsPolice = ({ route }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const pingingCircleScale = new Animated.Value(1); // Add this for pinging effect
   const pingingCircleRadius = new Animated.Value(0); // Add this for pinging effect
-
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   useEffect(() => {
     // Initialize Firebase auth
@@ -195,6 +198,28 @@ const ViewSOSDetailsPolice = ({ route }) => {
       console.log('Error updating complaint status:', error);
     }
   };
+  const handleStatusChange = async () => {
+    try {
+      const firestore = getFirestore();
+      const emergenciesRef = collection(firestore, 'Emergencies');
+  
+      // Query for the document with a specific transactionSosId
+      const querySnapshot = await getDocs(
+        query(emergenciesRef, where('transactionSosId', '==', emergency.transactionSosId))
+      );
+  
+      if (!querySnapshot.empty) {
+        // Document exists, update the "status" field
+        const emergencyDocRef = querySnapshot.docs[0].ref;
+        await updateDoc(emergencyDocRef, { status: selectedStatus });
+        
+        // Close the modal
+        setModalVisible(false);
+      }
+    } catch (error) {
+      console.log('Error changing status:', error);
+    }
+  };
   const handleDeleteButtonPress = () => {
     Alert.alert(
       'Delete Report',
@@ -278,7 +303,30 @@ const ViewSOSDetailsPolice = ({ route }) => {
         <Text style={styles.normalText}>Transaction ID:  <Text style={styles.boldText}> #{emergency.transactionSosId}</Text></Text>
         {address && (
           <Text style={styles.normalText}>Address: <Text style={styles.boldText}>{address}</Text></Text>
+          
         )}
+        <Text style={styles.normalText}>Status:  <Text
+        style={[
+          styles.statusText,
+          { backgroundColor:
+            emergency.status === 'Pending'
+              ? 'orange'
+              :  emergency.status === 'Ongoing'
+              ? '#186EEE'
+              :  emergency.status === 'Completed'
+              ? 'green'
+              :  emergency.status === 'Cancelled'
+              ? 'red'
+              : 'black',
+                  padding: 10,
+                  borderRadius: 4,
+                  zIndex: 1,
+                  width: 120,
+               },
+        ]}
+      > {emergency.status}</Text></Text>
+       
+        
         {/* Display minutes ago using the getMinutesAgo function */}
         {emergency.timestamp && (
                 <Text style={styles.timeText}>
@@ -291,24 +339,68 @@ const ViewSOSDetailsPolice = ({ route }) => {
                     : `${timeAgo.seconds} seconds`} ago
                 </Text>
             )}
-        {/* ... (other emergency details) */}
-        <View style={styles.buttonContainer}>
-        <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: 'green' }]}
-        onPress={() => handleClick(emergency)}
-      >
-        <Text style={styles.buttonText}>Accept</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: 'red' }]}
-        onPress={handleDeleteButtonPress}
-      >
-        <Text style={styles.buttonText}>Reject</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-    </ScrollView>
-  );
+            <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: '#08BAE1' }]}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text style={styles.buttonText}>Change Status</Text>
+            </TouchableOpacity>
+          </View>
+    
+          {/* Modal for changing the status */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Change Status</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedStatus('Pending');
+                    handleStatusChange();
+                  }}
+                >
+                  <Text style={styles.modalOption}>Pending</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedStatus('Ongoing');
+                    handleStatusChange();
+                  }}
+                >
+                  <Text style={styles.modalOption}>Ongoing</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedStatus('Cancelled');
+                    handleStatusChange();
+                  }}
+                >
+                  <Text style={styles.modalOption}>Cancelled</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedStatus('Completed');
+                    handleStatusChange();
+                  }}
+                >
+                  <Text style={styles.modalOption}>Completed</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.modalOption}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+          </View>
+        </ScrollView>
+      );
 };
 
 const styles = StyleSheet.create({
@@ -329,6 +421,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginVertical: 5,
     textAlign: 'center',
+  },
+  statusText: {
+    position: 'absolute',
+    top: '50%',
+    right: 8,
+    transform: [{ translateY: -8 }],
+    padding: 8,
+    borderRadius: 4,
+    zIndex: 1,
+    width: 5,
   },
   buttonText: {
     textAlign: 'center',
@@ -438,6 +540,29 @@ const styles = StyleSheet.create({
     height: 40,
     resizeMode: 'contain',
   },
+   modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalOption: {
+    fontSize: 18,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
 });
 
-export default ViewSOSDetailsPolice;
+export default ViewSOSDetailsAdmin;

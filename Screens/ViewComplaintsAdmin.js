@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ImageBackground, ScrollView, Alert} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getAuth, onAuthStateChanged } from '@firebase/auth';
-import { collection, query, onSnapshot, getFirestore } from '@firebase/firestore';
+import { Ionicons } from '@expo/vector-icons';
+import { getAuth, onAuthStateChanged} from '@firebase/auth';
+import { collection, query, where, onSnapshot, getFirestore, updateDoc, doc, deleteDoc, getDocs, getDoc, setDoc } from '@firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
 
 const ViewComplaintsAdmin = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const [complaints, setComplaints] = useState([]);
-
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('Active');
+  const filterOptions = ['All', 'Active', 'Pending', 'Ongoing', 'Completed', 'Cancelled'];
+  const [activeComplaintsCount, setActiveComplaintsCount] = useState(0);
   const navigation = useNavigation();
 
   const fetchAllComplaints = () => {
@@ -51,41 +57,94 @@ const ViewComplaintsAdmin = () => {
   if (!userData) {
     return <Text>Loading...</Text>;
   }
-
+  const handleFilterChange = (filter) => {
+    setSelectedFilter(filter);
+    setIsFilterOpen(false); // Close the modal when a filter is selected
+  };
+  const filteredComplaints = () => {
+    if (selectedFilter === 'All') {
+      return complaints;
+    } else if (selectedFilter === 'Active') {
+      return complaints.filter(complaint => complaint.status === 'Pending' || complaint.status === 'Ongoing');
+    } else {
+      return complaints.filter(complaint => complaint.status === selectedFilter);
+    }
+  };
   const handleClick = (complaint) => {
     navigation.navigate('View Complaint Details Admin', { complaint });
   };
 
   return (
     <View className="flex-1">
-      {complaints.map((complaint) => (
-        <View key={complaint.id} className="flex flex-col mt-5">
-          <TouchableOpacity onPress={() => handleClick(complaint)}>
-            <View className="bg-white h-28 mx-4 rounded-lg">
-              <Text className="text-lg font-bold ml-2">{complaint.name}</Text>
-              <Text className="ml-2">{complaint.date}</Text>
-              <View>
-                <Text className="ml-2">
-                  {complaint.barangay}, {complaint.street}
-                </Text>
-                <Text className="text-lg ml-2 text-red-500">#Complaints_{complaint.transactionId}</Text>
-              </View>
-              <Text
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: 8,
-                  transform: [{ translateY: -8 }],
-                  backgroundColor: complaint.status === 'Pending' ? 'orange' : 'white',
-                  padding: 8,
-                  borderRadius: 4,
-                  zIndex: 1,
-                }}
-              >
-                {complaint.status}
-              </Text>
-            </View>
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20 }}>
+    <TouchableOpacity onPress={() => setIsFilterOpen(true)}>
+    <Text className = "bg-white p-1 rounded-md" style={{ fontSize: 16, color: 'black', marginTop:5, }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
+  </TouchableOpacity>
+  </View>
+  <Modal visible={isFilterOpen} transparent={true} animationType='slide'>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>
+        <TouchableOpacity onPress={() => setIsFilterOpen(false)} style={{ alignItems: 'flex-end' }}>
+        <Ionicons name="ios-close-outline" size={24} color="black" />
+      </TouchableOpacity>
+          {filterOptions.map(filter => (
+            <TouchableOpacity
+              key={filter}
+              onPress={() => handleFilterChange(filter)}
+              style={{ paddingVertical: 8 }}
+              className = "p-2 border-b-2"
+            >
+              <Text>{filter}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </Modal>
+    {filteredComplaints().map((complaint) => (
+      <View key={complaint.transactionCompId} className="flex flex-col mt-5">
+        <TouchableOpacity onPress={() => handleClick(complaint)}>
+          <View className="bg-white h-28 mx-4 rounded-lg">
+            <Text className="text-lg font-bold ml-2">{complaint.name}</Text>
+            <TouchableOpacity onPress={() => handleCancelButtonPress(complaint.transactionCompId)}>
+            <Text style={{
+              fontSize: 25,
+            position: 'absolute',
+            right: 10,
+            color: 'red',
+            transform: [{ translateY: -30 }], }}>x</Text>
           </TouchableOpacity>
+            <Text className="ml-2">{complaint.date}</Text>
+            <View>
+              <Text className="ml-2">
+                {complaint.barangay}, {complaint.street}
+              </Text>
+              <Text className="text-lg ml-2 text-red-500">#COMPLAINTS_{complaint.transactionCompId}</Text>
+            </View>
+            <Text
+              style={{
+                position: 'absolute',
+                top: '50%',
+                right: 8,
+                transform: [{ translateY: -8 }],
+                backgroundColor:
+          complaint.status === 'Pending'
+            ? 'orange'
+            :  complaint.status === 'Ongoing'
+            ? '#186EEE'
+            :  complaint.status === 'Completed'
+            ? 'green'
+            :  complaint.status === 'Cancelled'
+            ? 'red'
+            : 'black',
+                padding: 8,
+                borderRadius: 4,
+                zIndex: 1,
+              }}
+            >
+              {complaint.status}
+            </Text>
+          </View>
+        </TouchableOpacity>
         </View>
       ))}
     </View>

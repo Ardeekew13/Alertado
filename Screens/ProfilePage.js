@@ -137,7 +137,7 @@ const passwordChange = async () => {
       await updateDoc(userRef, { 
         password: newPassword, 
       });
-      setIsAddressModalOpen(false);
+      setIsPasswordModalOpen(false);
     } else {
       console.error('New password and new confirm password do not match');
       // Handle the error or display an error message to the user
@@ -299,9 +299,9 @@ return (
             animationType='slide'>
             <View className="flex items-center justify-center my-auto w-96 ">
             <View className="bg-white rounded-lg p-4">
-               <Text className="text-xl font-semibold mb-4">Enter your new Password</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Enter your new password' value={newPassword} onChangeText={setNewPassword}/>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Confirm password' value={newConfirmPassword} onChangeText={setNewConfirmPassword}/>
+               <Text className="text-xl font-semibold mb-4">Enter your new password</Text>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Enter your new password' value={newPassword} onChangeText={setNewPassword} secureTextEntry={true}/>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Confirm password' value={newConfirmPassword} onChangeText={setNewConfirmPassword}  secureTextEntry={true}/>
                 <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={passwordChange}>
                  <Text className="font-semibold ">Save</Text>
                    </TouchableOpacity>

@@ -4,7 +4,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth, onAuthStateChanged} from '@firebase/auth';
 import { collection, query, where, onSnapshot, getFirestore, updateDoc, doc, deleteDoc, getDocs, getDoc, setDoc } from '@firebase/firestore';
-import { formatDistanceToNow } from 'date-fns';
+
 
 
 const ViewComplaints = () => {
@@ -107,6 +107,7 @@ const ViewComplaints = () => {
       unsubscribeAuth();
     };
   }, []);
+  
   const fetchActiveComplaintsCount = async (userId) => {
     try {
       const db = getFirestore();

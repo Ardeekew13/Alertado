@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getFirestore, collection, onSnapshot, getDocs, query, where,updateDoc } from '@firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 
-const ViewSOSPolice = () => {
+const ViewSOSAdmin = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const [emergencies, setEmergencies] = useState([]); 
@@ -17,40 +17,6 @@ const ViewSOSPolice = () => {
   const filterOptions = ['All', 'Active', 'Pending', 'Ongoing', 'Completed', 'Cancelled'];
 
 
- 
-  useEffect(() => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-
-    if (user) {
-      const ongoingEmergency = checkOngoingEmergencies(user.uid, emergencies);
-
-      if (ongoingEmergency) {
-        navigateToPoliceAccept(ongoingEmergency);
-      }
-    }
-  }, [emergencies]);
-  const navigateToPoliceAccept = (emergency) => {
-    if (emergency.status === 'Ongoing') {
-      navigation.navigate('Police Accept SOS', { emergency });
-    }
-  };
-
-
-  const checkOngoingEmergencies = (currentUserUid, emergencies) => {
-    if (!currentUserUid || !emergencies || emergencies.length === 0) {
-      return null;
-    }
-
-    const ongoingEmergency = emergencies.find((emergency) => {
-      return (
-        emergency.status === 'Ongoing' &&
-        emergency.policeAssignedID === currentUserUid
-      );
-    });
-
-    return ongoingEmergency;
-  };
   const fetchEmergencies = () => {
     const db = getFirestore();
     const emergenciesRef = collection(db, 'Emergencies');
@@ -88,16 +54,12 @@ const ViewSOSPolice = () => {
     }, [])
   );
 
-  // Call the function when the component renders
-  useEffect(() => {
-    checkOngoingEmergencies(userData, emergencies);
-  }, [userData, emergencies]);
 
   const handleButton = () => {
     navigation.navigate('Report Crime');
   };
   const handleClick = (emergency) => {
-    navigation.navigate('View SOS Details Police', { emergency });
+    navigation.navigate('View SOS Details Admin', { emergency });
   };
 
   const getMinutesAgo = (timestamp) => {
@@ -290,4 +252,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ViewSOSPolice;
+export default ViewSOSAdmin;

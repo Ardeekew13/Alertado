@@ -26,15 +26,15 @@ const Signout =()=>{
   return (
     <ScrollView>
         <View className="mt-2">
-          <View className="bg-white m-2 rounded-md">
+          <View className="bg-[#D01010] m-2 rounded-md">
             <TouchableOpacity onPress={handleRegister}>
-                <Text className="text-xl font-bold mx-auto p-4">Register Account</Text>
+                <Text className="text-xl font-bold mx-auto p-4 text-white">Register Account</Text>
             </TouchableOpacity>
           </View>
         
-          <View className="bg-white m-2 rounded-md">
-          <TouchableOpacity onPress={Signout}>
-            <Text className="text-xl font-bold mx-auto p-4">Log Out</Text>
+          <View className=" bg-[#D01010] m-2 rounded-md">
+          <TouchableOpacity className="" onPress={Signout}>
+            <Text className="text-xl font-bold mx-auto p-4 text-white">Log Out</Text>
             </TouchableOpacity>
           </View>
           

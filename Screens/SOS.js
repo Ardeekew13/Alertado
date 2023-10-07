@@ -1,39 +1,83 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert, Image } from 'react-native';
 import { doc, addDoc, collection, getDoc, setDoc, runTransaction,getDocs,getFirestore, updateDoc, onSnapshot, query, where } from 'firebase/firestore';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { db } from '../firebaseConfig.js';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/core';
+const CustomMarker = ({ coordinate, zoomLevel }) => {
+  const defaultMarkerSize = 30; // Increase the marker size value
+  const maxZoom = 20;
 
+  const calculateMarkerSize = (zoom) => {
+    const baseSize = defaultMarkerSize * (1 + (1 - zoom / maxZoom));
+    const aspectRatio = originalImageWidth / originalImageHeight;
+    let width, height;
+
+    if (baseSize / aspectRatio > defaultMarkerSize) {
+      width = baseSize;
+      height = baseSize / aspectRatio;
+    } else {
+      width = defaultMarkerSize * aspectRatio;
+      height = defaultMarkerSize;
+    }
+
+    return { width, height };
+  };
+
+  const originalImageWidth = 860; // Replace with the actual width of your image
+  const originalImageHeight = 1060; // Replace with the actual height of your image
+
+  const markerSize = calculateMarkerSize(zoomLevel);
+  return (
+    <Marker coordinate={coordinate}>
+      <Image
+        source={require('./images/SosPIN.png')}
+        style={markerSize}
+        resizeMode="contain" // This ensures the image maintains its aspect ratio and doesn't crop
+      />
+    </Marker>
+  );
+};
 const SOS = () => {
-  const [userData, setUserData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigation = useNavigation();
   const [hasPendingSOS, setHasPendingSOS] = useState(false);
+  const [hasOngoingSOS, setHasOngoingSOS] = useState(false);
   const [emergencyType, setEmergencyType] = useState(null);
   const [userSosStatus, setUserSosStatus] = useState(null);
   const [userSosLocation, setUserSosLocation] = useState(null);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [policeLocation, setPoliceLocation] = useState(null);
+  const [citizenLocation, setCitizenLocation] = useState(null);
+  const [realtimeLocation, setRealTimeLocation] = useState(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [userPoliceAssignedData, setUserPoliceAssignedData] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isWaitingForPolice, setIsWaitingForPolice] = useState(false);
   const [pingingCircleRadius, setPingingCircleRadius] = useState(0);
+  const [pendingSOSData, setPendingSOSData] = useState(null);
+  const [ongoingSOSData, setOngoingSOSData] = useState(null);
   const [isExpanding, setIsExpanding] = useState(false);
   const [pingingPosition, setPingingPosition] = useState(null);
   const [pingingAngle, setPingingAngle] = useState(0);
   const [mapKey, setMapKey] = useState(0);
+  const [userData, setUserData] = useState(null);
   const [initialRegion, setInitialRegion] = useState({
-    latitude: 0, // Set default latitude here
-    longitude: 0, // Set default longitude here
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    // Set initial latitude and longitude based on userSosLocation
+    latitude: userSosLocation ? userSosLocation.latitude : 0,
+    longitude: userSosLocation ? userSosLocation.longitude : 0,
+    latitudeDelta: 0.01, // Adjust the zoom level as needed
+    longitudeDelta: 0.01,
   });
 
+  const db = getFirestore();
+ 
   const mapRef = useRef(null); // Callback ref for the MapView
 
   const [isMapLayoutReady, setIsMapLayoutReady] = useState(false);
@@ -41,40 +85,64 @@ const SOS = () => {
   const remountMap = () => {
     setMapKey(mapKey + 1);
   };
+  
   useEffect(() => {
-    const currentUser = getAuth().currentUser;
-    const db = getFirestore();
-  
-    // Create a query to find the emergency document for the current user
-    const sosQuery = query(
-      collection(db, 'Emergencies'),
-      where('userId', '==', currentUser.uid)
-    );
-  
-    const unsubscribe = onSnapshot(sosQuery, (snapshot) => {
-      snapshot.forEach((doc) => {
-        if (doc.exists()) {
-          const sosData = doc.data();
-          console.log(sosData);
-          setUserSosStatus(sosData.status);
-          setUserSosLocation({
-            latitude: sosData.location.latitude,
-            longitude: sosData.location.longitude,
-          });
-        }
-      });
-    });
-  
-    return unsubscribe;
-  }, []);
-  // Check if there is a pending SOS for the current user and update the state accordingly.
-  useEffect(() => {
-    if (userSosStatus === 'Pending' && userSosLocation) {
-      setHasPendingSOS(true);
-    } else {
-      setHasPendingSOS(false);
-    }
-  }, [userSosStatus, userSosLocation]);
+    console.log('Component Rendered');
+    if (currentUser) {
+        const db = getFirestore();
+        const auth = getAuth();
+
+        // Create a query to find the 'Pending' or 'Ongoing' emergency documents for the current user
+        const sosQuery = query(
+            collection(db, 'Emergencies'),
+            where('userId', '==', currentUser.uid),
+            where('status', 'in', ['Pending', 'Ongoing'])
+        );
+
+        const unsubscribe = onSnapshot(sosQuery, async (snapshot) => {
+          let hasPendingSOS = false;
+          let hasOngoingSOS = false;
+          let pendingSOSData = null;
+          let ongoingSOSData = null;
+        
+          for (const doc of snapshot.docs) {
+            const sosData = doc.data();
+
+        
+            setUserSosStatus(sosData.status);
+        
+            // Set the userSosLocation state with the location data
+            setUserSosLocation({
+              latitude: sosData.citizenLocation.latitude,
+              longitude: sosData.citizenLocation.longitude,
+            });
+        
+            if (sosData.status === 'Ongoing') {
+              // If it's an ongoing emergency, set the entire sosData
+              ongoingSOSData = sosData;
+              hasOngoingSOS = true;
+              setPoliceLocation(ongoingSOSData.policeLocation);
+              setRouteCoordinates(ongoingSOSData.routeCoordinates);
+              setCitizenLocation(ongoingSOSData.citizenLocation);
+              setUserData(ongoingSOSData);
+            }
+            if (sosData.status === 'Pending') {
+              hasPendingSOS = true;
+              pendingSOSData = sosData;
+            }
+          }
+        
+          console.log('hasPendingSOS:', hasPendingSOS);
+          console.log('hasOngoingSOS:', hasOngoingSOS);
+        
+          setHasPendingSOS(hasPendingSOS);
+          setHasOngoingSOS(hasOngoingSOS);
+          setPendingSOSData(pendingSOSData);
+          setOngoingSOSData(ongoingSOSData);
+        });
+        return unsubscribe;
+    } 
+}, [currentUser, hasPendingSOS, hasOngoingSOS]);
   const fitMapToBounds = useCallback(() => {
     if (!isMapLayoutReady || !isMapReady || !isWaitingForPolice || !mapRef.current) return;
 
@@ -100,13 +168,13 @@ const SOS = () => {
           return;
         }
 
-        const location = await Location.getCurrentPositionAsync({});
-        setCurrentLocation(location.coords);
-        setMarkerPosition(location.coords);
+        const citizenLocation = await Location.getCurrentPositionAsync({});
+        setCurrentLocation(citizenLocation.coords);
+        setMarkerPosition(citizenLocation.coords);
         setInitialRegion((prevRegion) => ({
           ...prevRegion,
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
+          latitude: citizenLocation.coords.latitude,
+          longitude: citizenLocation.coords.longitude,
         }));
       } catch (error) {
         console.error('Error getting current location', error);
@@ -190,37 +258,40 @@ const SOS = () => {
     setMarkerPosition(currentLocation);
   };
 
-  const handleCancel = async (emergency, currentUser) => {
+  const cancelEmergency = async (currentUser) => {
     try {
-      const currentUser = getAuth().currentUser;
       const db = getFirestore();
       const sosQuery = query(
         collection(db, 'Emergencies'),
-        where('userId', '==', currentUser.uid)
+        where('userId', '==', currentUser.uid),
+        where('status', '==', 'Pending') // Optional: You can add this condition to only cancel pending emergencies.
       );
   
       const querySnapshot = await getDocs(sosQuery);
   
       if (querySnapshot.empty) {
-        console.log('Document not found');
+        console.log('No pending SOS found for the current user');
         return;
       }
   
-      // Iterate through the documents to find the matching emergency
-      querySnapshot.forEach(async (doc) => {
-        const data = doc.data();
-        if (data.transactionSosId === emergency.transactionSosId) {
-          // Update the status field to "Cancelled"
-          await updateDoc(doc.ref, { status: 'Cancelled' });
-          console.log('Complaint status updated to "Cancelled" successfully');
-        }
-      });
+      // Assuming there's only one pending SOS document for the current user
+      const sosDoc = querySnapshot.docs[0];
+      
+      // Update the status field to "Cancelled"
+      await updateDoc(sosDoc.ref, { status: 'Cancelled' });
+      
+      console.log('SOS status updated to "Cancelled" successfully');
     } catch (error) {
-      console.log('Error updating complaint status:', error);
+      console.error('Error cancelling SOS:', error);
     }
   
     // Hide the "Waiting for Police" UI
     setIsWaitingForPolice(false);
+  };
+  const handleCancel = async () => {
+    if (userSosStatus === 'Pending') {
+      cancelEmergency(currentUser);
+    }
   };
   
   const submitEmergency = async () => {
@@ -260,7 +331,7 @@ const SOS = () => {
   
         await addDoc(collection(db, 'Emergencies'), {
           type: emergencyType,
-          location: {
+          citizenLocation: {
             latitude: markerPosition.latitude,
             longitude: markerPosition.longitude,
           },
@@ -299,9 +370,128 @@ const SOS = () => {
       }
     }
   };
- 
   return (
     <SafeAreaView style={styles.container}>
+    { hasOngoingSOS ? (
+        <View style={styles.container}>
+        <View style={styles.ongoingContainer}>
+        <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: userSosLocation.latitude,
+          longitude: userSosLocation.longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        }}
+        onLayout={() => setIsMapReady(true)}
+        ref={mapRef}
+      >
+          {userSosLocation && isMapReady && (
+            <Marker
+            coordinate={userSosLocation}
+            flat={true} // Ensure the image doesn't tilt with the map
+          >
+              <Image
+                source={require('./images/SosPIN.png')} // Replace with the path to your custom marker image
+                style={{
+                  width: 40,
+                  height: 42, // Use the same dimensions as your custom image
+                  borderRadius: 20,
+                
+                }}
+              />
+            </Marker>
+          )}
+          {policeLocation && isMapReady && (
+            <Marker coordinate={policeLocation}
+            anchor={{ x: 0.5, y: 0.5 }}>
+              <Image
+                source={require('./images/policeCircle.png')} // Replace with the actual path to your circular image
+                style={{ width: 40, height: 40 }} // Adjust the size as needed
+              />
+            </Marker>
+          )}
+            {policeLocation && isMapReady && (
+              <Circle
+                center={policeLocation}
+              radius={500}
+              fillColor="rgba(0, 128, 255, 0.2)"
+              strokeColor="rgba(0, 128, 255, 0.5)"
+                // Add any other marker customization you need
+              />
+            )}
+            {routeCoordinates && (
+              <Polyline
+                coordinates={routeCoordinates}
+                strokeColor="blue"
+                strokeWidth={4}
+              />
+            )}
+            
+          </MapView>
+          <View style={styles.helpTextContainer}>
+            <Text style={styles.helpText}>Help is on the way</Text>
+            <Text style={styles.policeInfo}>
+              Police Name: {userData.policeFname} {userData.policeLname}
+            </Text>
+            <Text style={styles.policeInfo}>
+              Police Phone: {userData.policePhone}
+            </Text>
+            <Text style={styles.policeInfo}>
+              Police Status: {userData.status}
+            </Text>
+            <Text style={styles.policeInfo}>
+              Police Feedback: {userData.policeFeedback}
+            </Text>
+          </View>
+        </View>
+        </View>   
+      ): hasPendingSOS ? (
+        <View style={styles.waitingContainer}>
+          {userSosLocation && ( // Add this conditional check
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: userSosLocation.latitude,
+                longitude: userSosLocation.longitude,
+                latitudeDelta: 0.02, // Adjust as needed
+                longitudeDelta: 0.02, // Adjust as needed
+              }}
+              onLayout={() => setIsMapReady(true)}
+              ref={mapRef}
+            >
+              {userSosLocation && isMapReady && (
+                <Marker
+                  coordinate={userSosLocation}
+                >
+                  <Image
+                    source={require('./images/SosPIN.png')} // Replace with the path to your custom marker image
+                    style={{ width: 40, height: 43 }} // Adjust the size as needed
+                  />
+                </Marker>
+              )}
+              {pingingPosition && userSosLocation && isMapReady && (
+                <Circle
+                  center={userSosLocation}
+                  radius={pingingCircleRadius}
+                  fillColor="rgba(0, 128, 255, 0.2)"
+                  strokeColor="rgba(0, 128, 255, 0.5)"
+                />
+              )}
+            </MapView>
+          )}
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => handleCancel(currentUser)}
+          >
+            <View style={styles.cancelButtonInner}>
+              <Text style={styles.cancelButtonText}>Cancel SOS</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      ) :(
+      <>
+      <View style={styles.mainContainer}>
           <Text style={styles.text}>
             Feeling unsafe? Tap SOS alert for immediate help in emergencies. Your safety matters!
           </Text>
@@ -331,8 +521,10 @@ const SOS = () => {
           </View>
         </View>
       </Modal>
-
-      {(emergencyType && currentLocation && !isWaitingForPolice) || (userSosStatus === 'Pending' && userSosLocation) ? (
+      </View>
+      </>
+      )}
+      {(emergencyType && currentLocation && !isWaitingForPolice) ? (
         <>
           <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>
             <Ionicons name="ios-arrow-back" size={24} color="black" />
@@ -348,7 +540,7 @@ const SOS = () => {
             >
               {markerPosition  && isMapReady &&(
                 <Marker
-                  coordinate={markerPosition}
+                  coordinate={currentLocation}
                   draggable
                   onDragEnd={handleMarkerDragEnd}
                 />
@@ -368,26 +560,27 @@ const SOS = () => {
           </View>
         </>
       ) : null}
-              
-      {(emergencyType && isWaitingForPolice) || (userSosStatus === 'Pending' && userSosLocation) ? (
+      {(emergencyType && markerPosition && isWaitingForPolice && hasPendingSOS) ? (
         <View style={styles.waitingContainer}>
           <MapView
             style={styles.map}
             initialRegion={initialRegion}
-            onLayout={() => setIsMapLayoutReady(true)} // Set the flag when the map layout occurs
+            onLayout={() => {
+              console.log('Map layout is ready.');
+              setIsMapLayoutReady(true)}} // Set the flag when the map layout occurs
             ref={mapRef}
           >
-            {currentLocation && isMapReady && (
-              <Circle
-                center={currentLocation}
-                radius={200}
-                fillColor="rgba(0, 128, 255, 0.2)"
-                strokeColor="rgba(0, 128, 255, 0.5)"
+          
+            {markerPosition && isMapReady && (
+              <Marker
+                coordinate={markerPosition}
+                draggable
+                onDragEnd={handleMarkerDragEnd}
               />
             )}
             {pingingPosition && isMapReady && (
               <Circle
-                center={currentLocation}
+                center={markerPosition}
                 radius={pingingCircleRadius} // Use the state variable for the pinging circle radius
                 fillColor="rgba(0, 128, 255, 0.2)" // Customize the color and opacity of the circle
                 strokeColor="rgba(0, 128, 255, 0.5)" // Customize the color and opacity of the circle border
@@ -396,24 +589,32 @@ const SOS = () => {
           </MapView>
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => handleCancel(emergency, currentUser)} // Pass 'emergency' and 'currentUser'
+            onPress={() => handleCancel(currentUser)} // Pass 'emergency' and 'currentUser'
           >
             <View style={styles.cancelButtonInner}>
               <Text style={styles.cancelButtonText}>Cancel SOS</Text>
             </View>
           </TouchableOpacity>
-
         </View>
       ) : null}
-    </SafeAreaView>
+      
+      </SafeAreaView>
       );
             }
 
 const styles = StyleSheet.create({
-  container: {
+  ongoingContainer: {
+    flex: 1, 
+  },
+  mainContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', 
+    alignItems: 'center',     
+    marginHorizontal: 5,
+  },
+ container: {
+  ...StyleSheet.absoluteFillObject,
+  zIndex: 1,
   },
   text: {
     textAlign: 'center',
@@ -512,6 +713,23 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  helpTextContainer: {
+    backgroundColor: '#08BAE1',
+    padding: 16,
+    marginBottom: 16,
+  },
+  helpText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  policeInfo: {
+    fontSize: 16,
+    color: 'white',
+    marginBottom: 4,
   },
 });
 

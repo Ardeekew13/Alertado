@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView,TouchableWithoutFeedback,Keyboard, Platform, Button,SafeAreaView, Alert} from 'react-native';
 import { collection,query,where,doc, getDoc} from 'firebase/firestore';
 import {signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -7,6 +7,7 @@ import { db,authentication } from '../firebaseConfig';
 import { useNavigation } from '@react-navigation/core';
 import RegistrationForm from './RegistrationForm';
 import { ActivityIndicator } from 'react-native';
+
 
 export default LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +18,7 @@ export default LoginForm = () => {
   const [error, setError] = useState(null);
   const [role, setRole]=useState('');
   const navigation=useNavigation()
+
 const handleLogin = async () => {
   setIsLoading(true);
   try{
