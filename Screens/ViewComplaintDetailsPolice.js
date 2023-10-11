@@ -56,9 +56,9 @@ const ViewComplaintDetailsPolice = ({ route }) => {
       setLoading(true); // Show loading indicator while sending feedback
 
       const firestore = getFirestore();
+      const complaintsRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Complaints'),
-        where('transactionCompId', '==', complaint.transactionCompId)
+        query(complaintsRef, where('transactionCompId', '==', complaint.transactionCompId))
       );
 
       if (!querySnapshot.empty) {
@@ -88,31 +88,32 @@ const ViewComplaintDetailsPolice = ({ route }) => {
   const changeStatus = async () => {
     try {
       const firestore = getFirestore();
-  
+      const complaintsRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Complaints'),
-        where('transactionCompId', '==', complaint.transactionCompId)
+        query(complaintsRef, where('transactionCompId', '==', complaint.transactionCompId))
       );
+  
+      console.log('Changing status for complaints with transactionCompId:', complaint.transactionCompId);
   
       if (!querySnapshot.empty) {
         const complaintDoc = querySnapshot.docs[0];
         const complaintRef = doc(firestore, 'Complaints', complaintDoc.id);
   
+        console.log('Firestore Document ID:', complaintRef.id);
+  
         await updateDoc(complaintRef, { status: newStatus });
   
         console.log('Complaint status updated successfully');
-        Alert.alert('Successful', 'Status Changed');
         setModalVisible(false);
         setNewStatus(newStatus);
-
+  
+        // Update the status property of the report directly
         complaint.status = newStatus;
       } else {
-        console.log('Document with transactionCompId does not exist');
-        Alert.alert('Failed', 'Document does not exist');
+        console.log('No matching documents found for transactionCompId:', complaint.transactionCompId);
       }
     } catch (error) {
-      console.log('Error updating complaint status:', error);
-      Alert.alert('error', 'Error updating complaint status');
+      console.log('Error updating comp status:', error);
     }
   };
   return (

@@ -71,7 +71,7 @@ const ViewComplaintsAdmin = () => {
     }
   };
   const handleClick = (complaint) => {
-    navigation.navigate('View Complaint Details Admin', { complaint });
+    navigation.navigate('View Complaint Details Admin', { complaint,  transactionCompId: complaint.transactionCompId, });
   };
 
   return (

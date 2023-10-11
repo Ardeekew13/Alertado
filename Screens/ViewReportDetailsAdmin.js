@@ -80,26 +80,29 @@ const ViewReportDetailsAdmin = ({ route }) => {
   const changeStatus = async () => {
     try {
       const firestore = getFirestore();
-  
+      const reportsRef = collection(firestore, 'Reports');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Reports'),
-        where('transactionRepId', '==', report.transactionRepId)
+        query(reportsRef, where('transactionRepId', '==', report.transactionRepId))
       );
+  
+      console.log('Changing status for report with transactionRepId:', report.transactionRepId);
   
       if (!querySnapshot.empty) {
         const reportDoc = querySnapshot.docs[0];
         const reportRef = doc(firestore, 'Reports', reportDoc.id);
   
-        await updateDoc(reportRef, { status: temporaryStatus });
+        console.log('Firestore Document ID:', reportRef.id);
+  
+        await updateDoc(reportRef, { status: newStatus });
   
         console.log('Report status updated successfully');
         setModalVisible(false);
-        setNewStatus(temporaryStatus);
+        setNewStatus(newStatus);
   
         // Update the status property of the report directly
-        report.status = temporaryStatus;
+        report.status = newStatus;
       } else {
-        console.log('Document with transactionRepId does not exist');
+        console.log('No matching documents found for transactionRepId:', report.transactionRepId);
       }
     } catch (error) {
       console.log('Error updating report status:', error);
@@ -193,25 +196,6 @@ const ViewReportDetailsAdmin = ({ route }) => {
           )}
           <View style={styles.separator} />
     
-          {/* Add TextInput for feedback */}
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your feedback"
-            value={feedback}
-            onChangeText={setFeedback}
-          />
-    
-          <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSaveFeedback}
-          disabled={loading} 
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" /> // Show loading indicator when loading is true
-          ) : (
-            <Text style={styles.saveButtonText}>Save Feedback</Text>
-          )}
-        </TouchableOpacity>
         </View>
         </View>
       <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>

@@ -181,7 +181,7 @@ const AdminRegisterPolice = () => {
           role,
           idProofUrl, 
           address,
-          status: "Unverified",
+          status: role === "Police" ? "Verified" : "Unverified", // Check role and set status
         });
         console.log();
         Alert.alert(

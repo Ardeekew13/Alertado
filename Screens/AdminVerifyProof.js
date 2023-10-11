@@ -143,12 +143,13 @@ const AdminVerifyProof = ({ route }) => {
               marginTop: 20,
               backgroundColor: '#186EEE',
               width: 75,
+              height: 40,
               borderRadius: 4,
               alignItems: 'center',
               justifyContent: 'center', // Center the button horizontally
             }}
           >
-              <Text style={{textAlign:'center', fontWeight: 'bold'}}>Submit</Text>
+              <Text style={{textAlign:'center', fontWeight: 'bold', color:'white'}}>Submit</Text>
             </TouchableOpacity>
             </View>
           </View>

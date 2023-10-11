@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 const mapCustomStyle = [ { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] }, { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] }, { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] }, { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] }, { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] }, { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] } ]
 
 const ViewComplaintDetailsAdmin = ({ route }) => {
-  const { complaint } = route.params;
+  const { complaint, transactionCompId } = route.params;
   const complaintId = complaint.id;
   const navigation = useNavigation();
   const [feedback, setFeedback] = useState('');
@@ -23,6 +23,7 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newStatus, setNewStatus] = useState(complaint.status);
   const [complaintColor, setComplaintColor] = useState('black')
+
   useEffect(() => {
     if (newStatus === 'Pending') {
       setComplaintColor('orange');
@@ -88,31 +89,32 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
   const changeStatus = async () => {
     try {
       const firestore = getFirestore();
-  
+      const complaintsRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Complaints'),
-        where('transactionCompId', '==', complaint.transactionCompId)
+        query(complaintsRef, where('transactionCompId', '==', complaint.transactionCompId))
       );
+  
+      console.log('Changing status for complaints with transactionCompId:', complaint.transactionCompId);
   
       if (!querySnapshot.empty) {
         const complaintDoc = querySnapshot.docs[0];
         const complaintRef = doc(firestore, 'Complaints', complaintDoc.id);
   
+        console.log('Firestore Document ID:', complaintRef.id);
+  
         await updateDoc(complaintRef, { status: newStatus });
   
         console.log('Complaint status updated successfully');
-        Alert.alert('Successful', 'Status Changed');
         setModalVisible(false);
         setNewStatus(newStatus);
-
+  
+        // Update the status property of the report directly
         complaint.status = newStatus;
       } else {
-        console.log('Document with transactionCompId does not exist');
-        Alert.alert('Failed', 'Document does not exist');
+        console.log('No matching documents found for transactionCompId:', complaint.transactionCompId);
       }
     } catch (error) {
-      console.log('Error updating complaint status:', error);
-      Alert.alert('error', 'Error updating complaint status');
+      console.log('Error updating comp status:', error);
     }
   };
   return (
@@ -176,27 +178,6 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
             <Text>No Police Feedback available</Text>
           )}
           <View style={styles.separator} />
-    
-          {/* Add TextInput for feedback */}
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your feed back"
-            value={feedback}
-            onChangeText={setFeedback}
-          />
-    
-      
-          <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSaveFeedback}
-          disabled={loading} 
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" /> // Show loading indicator when loading is true
-          ) : (
-            <Text style={styles.saveButtonText}>Save Feedback</Text>
-          )}
-        </TouchableOpacity>
         </View>
         </View>
       <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
@@ -253,7 +234,7 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={changeStatus} style={styles.confirmButton}>
+        <TouchableOpacity onPress={() => changeStatus(complaint.transactionCompId)} style={styles.confirmButton}>
           <Text style={styles.confirmButtonText}>Confirm</Text>
         </TouchableOpacity>
       </View>

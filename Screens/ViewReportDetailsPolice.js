@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, Dimensions, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -54,9 +54,9 @@ const ViewReportDetailsPolice = ({ route }) => {
     try {
       setLoading(true);
       const firestore = getFirestore();
+      const reportsRef = collection(firestore, 'Reports');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Reports'),
-        where('transactionRepId', '==', report.transactionRepId)
+        query(reportsRef, where('transactionRepId', '==', report.transactionRepId))
       );
   
       if (!querySnapshot.empty) {
@@ -66,9 +66,12 @@ const ViewReportDetailsPolice = ({ route }) => {
         await updateDoc(reportRef, { PoliceFeedback: feedback }, { merge: true });
   
         console.log('Report feedback  successfully sent');
-  
+       
         // Update the status property of the report directly
         report.PoliceFeedback = feedback;
+        Alert.alert('Feedback Sent', 'Your feedback has been submitted successfully.');
+        setFeedback('');
+        setLoading(false);
       } else {
         console.log('Document with transactionRepId does not exist');
       }
@@ -79,15 +82,18 @@ const ViewReportDetailsPolice = ({ route }) => {
   const changeStatus = async () => {
     try {
       const firestore = getFirestore();
-  
+      const reportsRef = collection(firestore, 'Reports');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Reports'),
-        where('transactionRepId', '==', report.transactionRepId)
+        query(reportsRef, where('transactionRepId', '==', report.transactionRepId))
       );
+  
+      console.log('Changing status for report with transactionRepId:', report.transactionRepId);
   
       if (!querySnapshot.empty) {
         const reportDoc = querySnapshot.docs[0];
         const reportRef = doc(firestore, 'Reports', reportDoc.id);
+  
+        console.log('Firestore Document ID:', reportRef.id);
   
         await updateDoc(reportRef, { status: newStatus });
   
@@ -98,7 +104,7 @@ const ViewReportDetailsPolice = ({ route }) => {
         // Update the status property of the report directly
         report.status = newStatus;
       } else {
-        console.log('Document with transactionRepId does not exist');
+        console.log('No matching documents found for transactionRepId:', report.transactionRepId);
       }
     } catch (error) {
       console.log('Error updating report status:', error);
@@ -185,8 +191,8 @@ const ViewReportDetailsPolice = ({ route }) => {
           <View style={styles.separator} />
           <Text style={styles.largeText}>Police Feedbacks</Text>
           <View style={styles.separator} />
-          {feedback ? (
-            <Text>Your Feedback: {feedback}</Text>
+          {report.PoliceFeedback ? (
+            <Text>Your Feedback: {report.PoliceFeedback}</Text>
           ) : (
             <Text>No Police Feedback available</Text>
           )}
@@ -306,10 +312,12 @@ const styles = StyleSheet.create({
   },
   boldText: {
     fontWeight: 'bold',
+    fontSize: 17,
   },
   normalText: {
     fontWeight: 'normal',
     marginLeft: 10,
+    fontSize:15,
   },
   italicText: {
     fontWeight: 'normal',

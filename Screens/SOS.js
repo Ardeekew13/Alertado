@@ -49,6 +49,7 @@ const SOS = () => {
   const [hasOngoingSOS, setHasOngoingSOS] = useState(false);
   const [emergencyType, setEmergencyType] = useState(null);
   const [userSosStatus, setUserSosStatus] = useState(null);
+  const [cancelledSOS, setCancelledSOS]  = useState(false);
   const [userSosLocation, setUserSosLocation] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [policeLocation, setPoliceLocation] = useState(null);
@@ -96,7 +97,7 @@ const SOS = () => {
         const sosQuery = query(
             collection(db, 'Emergencies'),
             where('userId', '==', currentUser.uid),
-            where('status', 'in', ['Pending', 'Ongoing'])
+            where('status', 'in', ['Pending', 'Ongoing','Cancelled'])
         );
 
         const unsubscribe = onSnapshot(sosQuery, async (snapshot) => {
@@ -104,7 +105,7 @@ const SOS = () => {
           let hasOngoingSOS = false;
           let pendingSOSData = null;
           let ongoingSOSData = null;
-        
+          let cancelledSOS = false;
           for (const doc of snapshot.docs) {
             const sosData = doc.data();
 
@@ -130,6 +131,16 @@ const SOS = () => {
               hasPendingSOS = true;
               pendingSOSData = sosData;
             }
+              if (sosData.status === 'Cancelled '|| '') {
+              // If it's an ongoing emergency, set the entire sosData
+            
+              hasOngoingSOS = false;
+              hasPendingSOS = false;
+              cancelledSOS= true;
+              userSosStatus='Cancelled';
+             
+             
+            }
           }
         
           console.log('hasPendingSOS:', hasPendingSOS);
@@ -139,6 +150,7 @@ const SOS = () => {
           setHasOngoingSOS(hasOngoingSOS);
           setPendingSOSData(pendingSOSData);
           setOngoingSOSData(ongoingSOSData);
+          setCancelledSOS(cancelledSOS);
         });
         return unsubscribe;
     } 
@@ -370,9 +382,10 @@ const SOS = () => {
       }
     }
   };
+  console.log('userSosStatus:', userSosStatus);
   return (
     <SafeAreaView style={styles.container}>
-    { hasOngoingSOS ? (
+    { hasOngoingSOS && userSosStatus !== 'Cancelled' ? (
         <View style={styles.container}>
         <View style={styles.ongoingContainer}>
         <MapView
