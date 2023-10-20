@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Dimensions, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -21,15 +21,16 @@ const ViewReportDetailsPolice = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newStatus, setNewStatus] = useState(report.status);
   const [loading, setLoading] = useState(false);
+  const [temporaryStatus, setTemporaryStatus] = useState(report.status);
   const [reportColor, setReportColor] = useState('black')
   useEffect(() => {
-    if (newStatus === 'Pending') {
+    if (report.status === 'Pending') {
       setReportColor('orange');
-    } else if (newStatus === 'Ongoing') {
+    } else if (report.status === 'Ongoing') {
       setReportColor('#08BAE1');
-    } else if (newStatus === 'Completed') {
+    } else if (report.status === 'Completed') {
       setReportColor('green');
-    } else if (newStatus === 'Cancelled') {
+    } else if (report.status === 'Cancelled') {
       setReportColor('red');
     } else {
       setReportColor('black');
@@ -51,12 +52,19 @@ const ViewReportDetailsPolice = ({ route }) => {
   useEffect(() => {
   }, []);
   const handleSaveFeedback = async () => {
+    if (!feedback) {
+      // If feedback is empty, display an error message and return early
+      Alert.alert('Error', 'Feedback cannot be empty.');
+      return;
+    }
+  
     try {
-      setLoading(true);
+      setLoading(true); // Show loading indicator while sending feedback
+  
       const firestore = getFirestore();
-      const reportsRef = collection(firestore, 'Reports');
+      const reportRef = collection(firestore, 'Reports');
       const querySnapshot = await getDocs(
-        query(reportsRef, where('transactionRepId', '==', report.transactionRepId))
+        query(reportRef, where('transactionRepId', '==', report.transactionRepId))
       );
   
       if (!querySnapshot.empty) {
@@ -65,49 +73,67 @@ const ViewReportDetailsPolice = ({ route }) => {
   
         await updateDoc(reportRef, { PoliceFeedback: feedback }, { merge: true });
   
-        console.log('Report feedback  successfully sent');
-       
-        // Update the status property of the report directly
+        console.log('Complaint feedback successfully sent');
+  
         report.PoliceFeedback = feedback;
         Alert.alert('Feedback Sent', 'Your feedback has been submitted successfully.');
         setFeedback('');
-        setLoading(false);
       } else {
         console.log('Document with transactionRepId does not exist');
       }
     } catch (error) {
       console.log('Error updating report status:', error);
+      Alert.alert('Error', 'An error occurred while sending feedback.');
+    } finally {
+      setLoading(false);
     }
   };
   const changeStatus = async () => {
+    if (temporaryStatus === report.status) {
+      setModalVisible(false);
+      return;
+    }
+    if (report.status === 'Ongoing' && temporaryStatus === 'Pending') {
+      
+      Alert.alert('Invalid Status Change', 'You cannot change "Ongoing" to "Pending".');
+      return;
+    }
+    if (report.status === 'Completed' && temporaryStatus !== 'Completed') {
+      Alert.alert('Invalid Status Change', 'A report that is "Completed" cannot be changed.');
+      return;
+    }
+  
+    if (report.status === 'Cancelled' && temporaryStatus !== 'Cancelled') {
+      Alert.alert('Invalid Status Change', 'A report that is "Cancelled" cannot be changed.');
+      return;
+    }
     try {
+      setLoading(true);
       const firestore = getFirestore();
       const reportsRef = collection(firestore, 'Reports');
       const querySnapshot = await getDocs(
         query(reportsRef, where('transactionRepId', '==', report.transactionRepId))
       );
-  
-      console.log('Changing status for report with transactionRepId:', report.transactionRepId);
-  
+
       if (!querySnapshot.empty) {
         const reportDoc = querySnapshot.docs[0];
         const reportRef = doc(firestore, 'Reports', reportDoc.id);
-  
-        console.log('Firestore Document ID:', reportRef.id);
-  
-        await updateDoc(reportRef, { status: newStatus });
-  
+
+        await updateDoc(reportRef, { status: temporaryStatus });
+
+        Alert.alert('Status Change Successful', `Status changed to "${temporaryStatus}"`);
         console.log('Report status updated successfully');
         setModalVisible(false);
-        setNewStatus(newStatus);
-  
+        setNewStatus(temporaryStatus);
         // Update the status property of the report directly
-        report.status = newStatus;
+        report.status = temporaryStatus;
       } else {
         console.log('No matching documents found for transactionRepId:', report.transactionRepId);
       }
     } catch (error) {
       console.log('Error updating report status:', error);
+    } finally {
+      setLoading(false);
     }
   };
   const handleDeleteButtonPress = () => {
@@ -127,15 +153,29 @@ const ViewReportDetailsPolice = ({ route }) => {
       ],
     );
   };
-
+  const formatDateAndTime = (timestamp) => {
+    const reportDate = new Date(timestamp);
+  
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+    };
+  
+    return reportDate.toLocaleDateString(undefined, options);
+  };
   return (
     <ScrollView style={styles.flexContainer}>
       <View style={styles.flexContainer}>
         <View style={styles.contentContainer}>
           <Text style={styles.boldText}>Reported By: </Text>
           <Text style={styles.normalText}>{report.name}</Text>
-          <Text style={styles.boldText}>Date Reported: </Text>
+          <Text style={styles.boldText}>Date Incident: </Text>
           <Text style={styles.normalText}>{report.date}</Text>
+       
           <Text style={styles.boldText}>Complainee: </Text>
           <Text style={styles.normalText}>{report.complainee}</Text>
           <Text style={styles.boldText}>Wanted or not? </Text>
@@ -144,6 +184,8 @@ const ViewReportDetailsPolice = ({ route }) => {
           <Text style={styles.normalText}>{report.message}</Text>
           <Text style={styles.boldText}>Report Transaction ID: </Text>
           <Text style={styles.italicText}>#{report.transactionRepId}</Text>
+          <Text style={styles.boldText}>Date and Reported: </Text>
+          <Text style={styles.normalText}> {formatDateAndTime(report.timestamp)}</Text>
           <Text style={styles.boldText}>Status:</Text>
           <View
           style={[
@@ -164,7 +206,6 @@ const ViewReportDetailsPolice = ({ route }) => {
 
         {report.location && (
           <MapView
-            customMapStyle= {mapCustomStyle}
             style={styles.map}
             ref={mapRef}
             onLayout={handleMapLayout}
@@ -198,30 +239,33 @@ const ViewReportDetailsPolice = ({ route }) => {
           )}
           <View style={styles.separator} />
     
-          {/* Add TextInput for feedback */}
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your feedback"
-            value={feedback}
-            onChangeText={setFeedback}
-          />
-    
-          <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSaveFeedback}
-          disabled={loading} 
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" /> // Show loading indicator when loading is true
-          ) : (
-            <Text style={styles.saveButtonText}>Save Feedback</Text>
-          )}
-        </TouchableOpacity>
         </View>
         </View>
+        <TextInput
+        style={styles.textInput}
+        value={feedback}
+        onChangeText={setFeedback}
+        placeholder="Enter your feedback here"
+        multiline={true}
+      />
+      <TouchableOpacity style={{backgroundColor: 'red',
+      borderRadius: 5,
+      padding: 10,
+      width: '80%',
+      alignSelf: 'center', // Center horizontally within the parent view
+      marginBottom: 10,
+      justifyContent: 'center',}} onPress={handleSaveFeedback}  disabled={loading}>
+      {loading ? (
+        <ActivityIndicator color="white" />
+      ) : (
+        <Text style={styles.buttonText}>Send Feedback</Text>
+      )}
+       </TouchableOpacity>
+        {!(report.status === 'Completed' || report.status === 'Cancelled') && (
       <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
       <Text style={styles.modalButtonText}>Change Status</Text>
     </TouchableOpacity>
+        )}
     <Modal visible={modalVisible} transparent={true} animationType="slide">
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
@@ -229,52 +273,55 @@ const ViewReportDetailsPolice = ({ route }) => {
           <Ionicons name="ios-close-outline" size={24} color="black" />
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Pending')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Pending')}>
+        <Text
+          style={[
+            styles.statusOption,
+            temporaryStatus === 'Pending' && styles.selectedStatusOption,
+          ]}
+        >
+          Pending
+        </Text>
+      </TouchableOpacity>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Ongoing')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Pending' && styles.selectedStatusOption,
-            ]}
-          >
-            Pending
-          </Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={() => setNewStatus('Ongoing')}>
-          <Text
-            style={[
-              styles.statusOption,
-              newStatus === 'Ongoing' && styles.selectedStatusOption,
+              temporaryStatus  === 'Ongoing' && styles.selectedStatusOption,
             ]}
           >
             Ongoing
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Completed')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Completed')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Completed' && styles.selectedStatusOption,
+              temporaryStatus  === 'Completed' && styles.selectedStatusOption,
             ]}
           >
             Completed
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Cancelled')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Cancelled')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Cancelled' && styles.selectedStatusOption,
+              temporaryStatus  === 'Cancelled' && styles.selectedStatusOption,
             ]}
           >
             Cancel
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={changeStatus} style={styles.confirmButton}>
+        <TouchableOpacity onPress={changeStatus}   disabled={loading} style={styles.confirmButton}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
           <Text style={styles.confirmButtonText}>Confirm</Text>
+        )}
         </TouchableOpacity>
       </View>
     </View>
@@ -312,12 +359,10 @@ const styles = StyleSheet.create({
   },
   boldText: {
     fontWeight: 'bold',
-    fontSize: 17,
   },
   normalText: {
     fontWeight: 'normal',
     marginLeft: 10,
-    fontSize:15,
   },
   italicText: {
     fontWeight: 'normal',
@@ -448,6 +493,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  ButtonText: {
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',

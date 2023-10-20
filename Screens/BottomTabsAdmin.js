@@ -7,7 +7,7 @@ import ViewComplaintsAdmin from './ViewComplaintsAdmin';
 import ViewSOSAdmin from './ViewSOSAdmin'
 import AdminVerify from './AdminVerify';
 import AdminCreateAccount from './AdminCreateAccount';
-
+import ProfilePage from './ProfilePage';
 
 
 
@@ -94,6 +94,16 @@ function BottomTabsAdmin(){
         ),
       }}
     />
+    <Tab.Screen
+  name="Profile Page"
+  component={ProfilePage}
+  options={{
+    tabBarLabel: 'Profile Page',
+    tabBarIcon: ({ color, size }) => (
+      <FontAwesome5 name="user" size={20} color={color} />
+    ),
+  }}
+/>
   </Tab.Navigator>  
   );
 }

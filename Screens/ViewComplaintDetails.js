@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, } from 'react-native';
+import { View, Text, StyleSheet, Dimensions,TextInput } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import MapView, { Marker } from 'react-native-maps';
 import { getFirestore, deleteDoc, doc, collection, query, where, getDocs, updateDoc,getDoc,setDoc } from '@firebase/firestore';
@@ -13,17 +13,19 @@ const ViewComplaintDetails = ({ route }) => {
   const navigation = useNavigation();
   const [newStatus, setNewStatus] = useState(complaint.status);
   const [complaintColor, setComplaintColor] = useState('black')
+  const [mapLayout, setMapLayout]=useState(false);
+  
   useEffect(() => {
     if (newStatus === 'Pending') {
-      setReportColor('orange');
+      setComplaintColor('orange');
     } else if (newStatus === 'Ongoing') {
-      setReportColor('#08BAE1');
+      setComplaintColor('#08BAE1');
     } else if (newStatus === 'Completed') {
-      setReportColor('green');
+      setComplaintColor('green');
     } else if (newStatus === 'Cancelled') {
-      setReportColor('red');
+      setComplaintColor('red');
     } else {
-      setReportColor('black');
+      setComplaintColor('black');
     }
   }, [newStatus, complaint.status]);
   const handleMapLayout = () => {
@@ -149,88 +151,14 @@ const ViewComplaintDetails = ({ route }) => {
           <View style={styles.separator} />
           <Text style={styles.largeText}>Police Feedbacks</Text>
           <View style={styles.separator} />
-          {feedback ? (
-            <Text>Your Feedback: {feedback}</Text>
+          {complaint.PoliceFeedback ? (
+            <Text>Your Feedback: {complaint.PoliceFeedback}</Text>
           ) : (
             <Text>No Police Feedback available</Text>
           )}
           <View style={styles.separator} />
-    
-          {/* Add TextInput for feedback */}
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your feedback"
-            value={feedback}
-            onChangeText={setFeedback}
-          />
-    
-          {/* Add button to save feedback */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveFeedback}>
-            <Text style={styles.saveButtonText}>Save Feedback</Text>
-          </TouchableOpacity>
         </View>
         </View>
-      <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
-      <Text style={styles.modalButtonText}>Change Status</Text>
-    </TouchableOpacity>
-    <Modal visible={modalVisible} transparent={true} animationType="slide">
-    <View style={styles.modalContainer}>
-      <View style={styles.modalContent}>
-        <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-          <Ionicons name="ios-close-outline" size={24} color="black" />
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={() => setNewStatus('Pending')}>
-          <Text
-            style={[
-              styles.statusOption,
-              newStatus === 'Pending' && styles.selectedStatusOption,
-            ]}
-          >
-            Pending
-          </Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={() => setNewStatus('Ongoing')}>
-          <Text
-            style={[
-              styles.statusOption,
-              newStatus === 'Ongoing' && styles.selectedStatusOption,
-            ]}
-          >
-            Ongoing
-          </Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={() => setNewStatus('Completed')}>
-          <Text
-            style={[
-              styles.statusOption,
-              newStatus === 'Completed' && styles.selectedStatusOption,
-            ]}
-          >
-            Completed
-          </Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={() => setNewStatus('Cancelled')}>
-          <Text
-            style={[
-              styles.statusOption,
-              newStatus === 'Cancelled' && styles.selectedStatusOption,
-            ]}
-          >
-            Cancel
-          </Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity onPress={changeStatus} style={styles.confirmButton}>
-          <Text style={styles.confirmButtonText}>Confirm</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-  
     </ScrollView>
   );
 };

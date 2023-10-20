@@ -64,24 +64,26 @@ const ViewSOSAdmin = () => {
 
   const getMinutesAgo = (timestamp) => {
     if (!timestamp) return null;
-
+  
     const now = new Date();
     const reportTime = new Date(timestamp);
-
+  
     // Calculate the difference in milliseconds between the current time and the report time
     const timeDiff = now.getTime() - reportTime.getTime();
-
-    // Convert the time difference to minutes
-    const minutesAgo = Math.floor(timeDiff / (1000 * 60));
-
-    // Convert to human-readable format
-    if (minutesAgo < 60) {
+  
+    // Convert the time difference to seconds
+    const secondsAgo = Math.floor(timeDiff / 1000);
+  
+    if (secondsAgo < 60) {
+      return `${secondsAgo} seconds ago`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
       return `${minutesAgo} minutes ago`;
-    } else if (minutesAgo >= 60 && minutesAgo < 1440) {
-      const hoursAgo = Math.floor(minutesAgo / 60);
-      return `${hoursAgo} hr ago`;
+    } else if (secondsAgo < 86400) {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${hoursAgo} hours ago`;
     } else {
-      const daysAgo = Math.floor(minutesAgo / 1440);
+      const daysAgo = Math.floor(secondsAgo / 86400);
       return `${daysAgo} days ago`;
     }
   };
@@ -139,7 +141,7 @@ const ViewSOSAdmin = () => {
   };
   return (
     <ScrollView className="flex-1">
-    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20 }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20, marginTop:2 }}>
   <TouchableOpacity onPress={() => setIsFilterOpen(true)}>
     <Text style={{ fontSize: 16, color: 'black' }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
   </TouchableOpacity>

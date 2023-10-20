@@ -17,6 +17,7 @@ import AdminVerify from './Screens/AdminVerify'
 import AdminCreateAccount from './Screens/AdminCreateAccount'
 import BottomTabsAdmin from './Screens/BottomTabsAdmin'
 import BottomTabsPolice from './Screens/BottomTabsPolice'
+import BottomTabsTourist from './Screens/BottomTabsTourist'
 import CitizenVerification from './Screens/CitizenVerification'
 import AdminVerifyProof from './Screens/AdminVerifyProof'
 import ProfilePageChange from './Screens/ProfilePageChange'
@@ -132,6 +133,11 @@ export default function App() {
          <Stack.Screen
          name="BottomTabsPolice"
          component={BottomTabsPolice}
+         options={{ headerShown: false }}
+         />
+         <Stack.Screen
+         name="BottomTabsTourist"
+         component={BottomTabsTourist}
          options={{ headerShown: false }}
          />
         <Stack.Screen

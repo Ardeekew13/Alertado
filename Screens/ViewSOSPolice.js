@@ -21,12 +21,12 @@ const ViewSOSPolice = () => {
   useEffect(() => {
     const auth = getAuth();
     const user = auth.currentUser;
-
+  
     if (user) {
       const ongoingEmergency = checkOngoingEmergencies(user.uid, emergencies);
-
-      if (ongoingEmergency) {
-        navigateToPoliceAccept(ongoingEmergency);
+  
+      if (ongoingEmergency && ongoingEmergency.status === 'Ongoing') {
+        navigation.navigate('Police Accept SOS', { emergency: ongoingEmergency });
       }
     }
   }, [emergencies]);

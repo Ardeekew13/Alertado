@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -24,13 +24,13 @@ const ViewReportDetailsAdmin = ({ route }) => {
   const [temporaryStatus, setTemporaryStatus] = useState(report.status);
   const [reportColor, setReportColor] = useState('black')
   useEffect(() => {
-    if (newStatus === 'Pending') {
+    if (report.status === 'Pending') {
       setReportColor('orange');
-    } else if (newStatus === 'Ongoing') {
+    } else if (report.status === 'Ongoing') {
       setReportColor('#08BAE1');
-    } else if (newStatus === 'Completed') {
+    } else if (report.status === 'Completed') {
       setReportColor('green');
-    } else if (newStatus === 'Cancelled') {
+    } else if (report.status === 'Cancelled') {
       setReportColor('red');
     } else {
       setReportColor('black');
@@ -78,34 +78,51 @@ const ViewReportDetailsAdmin = ({ route }) => {
     }
   };
   const changeStatus = async () => {
+    if (temporaryStatus === report.status) {
+      setModalVisible(false);
+      return;
+    }
+    if (report.status === 'Ongoing' && temporaryStatus === 'Pending') {
+      
+      Alert.alert('Invalid Status Change', 'You cannot change "Ongoing" to "Pending".');
+      return;
+    }
+    if (report.status === 'Completed' && temporaryStatus !== 'Completed') {
+      Alert.alert('Invalid Status Change', 'A report that is "Completed" cannot be changed.');
+      return;
+    }
+  
+    if (report.status === 'Cancelled' && temporaryStatus !== 'Cancelled') {
+      Alert.alert('Invalid Status Change', 'A report that is "Cancelled" cannot be changed.');
+      return;
+    }
     try {
+      setLoading(true);
       const firestore = getFirestore();
       const reportsRef = collection(firestore, 'Reports');
       const querySnapshot = await getDocs(
         query(reportsRef, where('transactionRepId', '==', report.transactionRepId))
       );
-  
-      console.log('Changing status for report with transactionRepId:', report.transactionRepId);
-  
+
       if (!querySnapshot.empty) {
         const reportDoc = querySnapshot.docs[0];
         const reportRef = doc(firestore, 'Reports', reportDoc.id);
-  
-        console.log('Firestore Document ID:', reportRef.id);
-  
-        await updateDoc(reportRef, { status: newStatus });
-  
+
+        await updateDoc(reportRef, { status: temporaryStatus });
+
+        Alert.alert('Status Change Successful', `Status changed to "${temporaryStatus}"`);
         console.log('Report status updated successfully');
         setModalVisible(false);
-        setNewStatus(newStatus);
-  
+        setNewStatus(temporaryStatus);
         // Update the status property of the report directly
-        report.status = newStatus;
+        report.status = temporaryStatus;
       } else {
         console.log('No matching documents found for transactionRepId:', report.transactionRepId);
       }
     } catch (error) {
       console.log('Error updating report status:', error);
+    } finally {
+      setLoading(false);
     }
   };
   const handleDeleteButtonPress = () => {
@@ -125,7 +142,20 @@ const ViewReportDetailsAdmin = ({ route }) => {
       ],
     );
   };
-
+  const formatDateAndTime = (timestamp) => {
+    const reportDate = new Date(timestamp);
+  
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+    };
+  
+    return reportDate.toLocaleDateString(undefined, options);
+  };
   return (
     <ScrollView style={styles.flexContainer}>
       <View style={styles.flexContainer}>
@@ -142,6 +172,8 @@ const ViewReportDetailsAdmin = ({ route }) => {
           <Text style={styles.normalText}>{report.message}</Text>
           <Text style={styles.boldText}>Report Transaction ID: </Text>
           <Text style={styles.italicText}>#{report.transactionRepId}</Text>
+          <Text style={styles.boldText}>Date and Reported: </Text>
+          <Text style={styles.normalText}> {formatDateAndTime(report.timestamp)}</Text>
           <Text style={styles.boldText}>Status:</Text>
           <View
           style={[
@@ -162,7 +194,6 @@ const ViewReportDetailsAdmin = ({ route }) => {
 
         {report.location && (
           <MapView
-            customMapStyle= {mapCustomStyle}
             style={styles.map}
             ref={mapRef}
             onLayout={handleMapLayout}
@@ -198,9 +229,14 @@ const ViewReportDetailsAdmin = ({ route }) => {
     
         </View>
         </View>
+
+        
+        {!(report.status === 'Completed' || report.status === 'Cancelled') && (
+  
       <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
       <Text style={styles.modalButtonText}>Change Status</Text>
     </TouchableOpacity>
+    )}
     <Modal visible={modalVisible} transparent={true} animationType="slide">
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
@@ -251,8 +287,12 @@ const ViewReportDetailsAdmin = ({ route }) => {
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={changeStatus} style={styles.confirmButton}>
+        <TouchableOpacity onPress={changeStatus}   disabled={loading} style={styles.confirmButton}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
           <Text style={styles.confirmButtonText}>Confirm</Text>
+        )}
         </TouchableOpacity>
       </View>
     </View>

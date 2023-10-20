@@ -140,8 +140,8 @@ const ViewSOSDetailsPolice = ({ route }) => {
         {
           text: 'OK',
           onPress: () => {
-            // Navigate back to the previous screen
-            navigation.navigate('View SOS Police');
+              // Navigate back to the previous screen
+              navigation.goBack();
           },
         },
       ]);
@@ -293,7 +293,9 @@ const ViewSOSDetailsPolice = ({ route }) => {
       </View>
   
       <View style={styles.detailsContainer}>
+      {emergency.status === 'Pending' && (
         <Text style={styles.urgentHelpText}>Needs Urgent Help</Text>
+      )}
         <Text style={styles.normalText}>Name: <Text style={styles.boldText}> {emergency.userFirstName}</Text></Text>
         <Text style={styles.normalText}>Type of Emergency: <Text style={styles.boldText}> {emergency.type}</Text></Text>
         <Text style={styles.normalText}>Transaction ID:  <Text style={styles.boldText}> #{emergency.transactionSosId}</Text></Text>
@@ -312,21 +314,24 @@ const ViewSOSDetailsPolice = ({ route }) => {
                     : `${timeAgo.seconds} seconds`} ago
                 </Text>
             )}
-        {/* ... (other emergency details) */}
-        <View style={styles.buttonContainer}>
-        <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: 'green' }]}
-        onPress={() => handleClick(emergency)}
-      >
-        <Text style={styles.buttonText}>Accept</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: 'red' }]}
-        onPress={() => handleDeleteButtonPress(emergency.transactionSosId)}
-      >
-        <Text style={styles.buttonText}>Reject</Text>
-      </TouchableOpacity>
-    </View>
+            {emergency.status === 'Pending' && (
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: 'green' }]
+                }
+                onPress={() => handleClick(emergency)}
+                >
+                  <Text style={styles.buttonText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: 'red' }]
+                }
+                onPress={() => handleDeleteButtonPress(emergency.transactionSosId)}
+                >
+                  <Text style={styles.buttonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
   </View>
     </ScrollView>
   );

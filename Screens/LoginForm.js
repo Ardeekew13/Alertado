@@ -48,7 +48,10 @@ const handleLogin = async () => {
           navigation.navigate('BottomTabsAdmin');
         } else if (userRole === 'Police') {
           navigation.navigate('BottomTabsPolice');
-        } else {
+        }
+        else if (userRole === 'Tourist Police') {
+          navigation.navigate('BottomTabsTourist');
+        }  else {
           setError('User not found');
         }
         

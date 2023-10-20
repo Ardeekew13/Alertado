@@ -23,15 +23,15 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newStatus, setNewStatus] = useState(complaint.status);
   const [complaintColor, setComplaintColor] = useState('black')
-
+  const [temporaryStatus, setTemporaryStatus] = useState(complaint.status);
   useEffect(() => {
-    if (newStatus === 'Pending') {
+    if (complaint.status === 'Pending') {
       setComplaintColor('orange');
-    } else if (newStatus === 'Ongoing') {
+    } else if (complaint.status === 'Ongoing') {
       setComplaintColor('#08BAE1');
-    } else if (newStatus === 'Completed') {
+    } else if (complaint.status === 'Completed') {
       setComplaintColor('green');
-    } else if (newStatus === 'Cancelled') {
+    } else if (complaint.status === 'Cancelled') {
       setComplaintColor('red');
     } else {
       setComplaintColor('black');
@@ -57,9 +57,9 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
       setLoading(true); // Show loading indicator while sending feedback
 
       const firestore = getFirestore();
+      const complaintRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Complaints'),
-        where('transactionCompId', '==', complaint.transactionCompId)
+        query(complaintRef, where('transactionCompId', '==', complaint.transactionCompId))
       );
 
       if (!querySnapshot.empty) {
@@ -87,35 +87,66 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
     }
   };
   const changeStatus = async () => {
+    if (temporaryStatus === complaint.status) {
+      setModalVisible(false);
+      return;
+    }
+    if (complaint.status === 'Ongoing' && temporaryStatus === 'Pending') {
+      
+      Alert.alert('Invalid Status Change', 'You cannot change "Ongoing" to "Pending".');
+      return;
+    }
+    if (complaint.status === 'Completed' && temporaryStatus !== 'Completed') {
+      Alert.alert('Invalid Status Change', 'A complaint that is "Completed" cannot be changed.');
+      return;
+    }
+  
+    if (complaint.status === 'Cancelled' && temporaryStatus !== 'Cancelled') {
+      Alert.alert('Invalid Status Change', 'A complaint that is "Cancelled" cannot be changed.');
+      return;
+    }
     try {
+      setLoading(true);
       const firestore = getFirestore();
-      const complaintsRef = collection(firestore, 'Complaints');
+      const reportsRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        query(complaintsRef, where('transactionCompId', '==', complaint.transactionCompId))
+        query(reportsRef, where('transactionCompId', '==', report.transactionCompId))
       );
-  
-      console.log('Changing status for complaints with transactionCompId:', complaint.transactionCompId);
-  
+
       if (!querySnapshot.empty) {
-        const complaintDoc = querySnapshot.docs[0];
-        const complaintRef = doc(firestore, 'Complaints', complaintDoc.id);
-  
-        console.log('Firestore Document ID:', complaintRef.id);
-  
-        await updateDoc(complaintRef, { status: newStatus });
-  
+        const reportDoc = querySnapshot.docs[0];
+        const reportRef = doc(firestore, 'Complaints', reportDoc.id);
+
+        await updateDoc(reportRef, { status: temporaryStatus });
+
+        Alert.alert('Status Change Successful', `Status changed to "${temporaryStatus}"`);
         console.log('Complaint status updated successfully');
         setModalVisible(false);
-        setNewStatus(newStatus);
-  
+        setNewStatus(temporaryStatus);
         // Update the status property of the report directly
-        complaint.status = newStatus;
+        complaint.status = temporaryStatus;
       } else {
-        console.log('No matching documents found for transactionCompId:', complaint.transactionCompId);
+        console.log('No matching documents found for transactionCompId:', complaint.transactionComoId);
       }
     } catch (error) {
-      console.log('Error updating comp status:', error);
+      console.log('Error updating complaint status:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+  const formatDateAndTime = (timestamp) => {
+    const complaintDate = new Date(timestamp);
+  
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+    };
+  
+    return complaintDate.toLocaleDateString(undefined, options);
   };
   return (
     <ScrollView style={styles.flexContainer}>
@@ -133,6 +164,8 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
         <Text style={styles.normalText}>{complaint.message}</Text>
         <Text style={styles.boldText}>Complaint Transaction ID: </Text>
         <Text style={styles.largeText}>#{complaint.transactionCompId}</Text>
+        <Text style={styles.boldText}>Date and Reported: </Text>
+        <Text style={styles.normalText}> {formatDateAndTime(complaint.timestamp)}</Text>
         <Text style={styles.boldText}>Status:</Text>
         <View
         style={[
@@ -180,9 +213,11 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
           <View style={styles.separator} />
         </View>
         </View>
-      <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
-      <Text style={styles.modalButtonText}>Change Status</Text>
-    </TouchableOpacity>
+        {!(complaint.status === 'Completed' || complaint.status === 'Cancelled') && (
+          <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.modalButtonText}>Change Status</Text>
+        </TouchableOpacity>
+            )}
     <Modal visible={modalVisible} transparent={true} animationType="slide">
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
@@ -190,44 +225,44 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
           <Ionicons name="ios-close-outline" size={24} color="black" />
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Pending')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Pending')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Pending' && styles.selectedStatusOption,
+              temporaryStatus === 'Pending' && styles.selectedStatusOption,
             ]}
           >
             Pending
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Ongoing')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Ongoing')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Ongoing' && styles.selectedStatusOption,
+              temporaryStatus === 'Ongoing' && styles.selectedStatusOption,
             ]}
           >
             Ongoing
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Completed')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Completed')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Completed' && styles.selectedStatusOption,
+              temporaryStatus === 'Completed' && styles.selectedStatusOption,
             ]}
           >
             Completed
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Cancelled')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Cancelled')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Cancelled' && styles.selectedStatusOption,
+              temporaryStatus === 'Cancelled' && styles.selectedStatusOption,
             ]}
           >
             Cancel
@@ -235,7 +270,11 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
         </TouchableOpacity>
   
         <TouchableOpacity onPress={() => changeStatus(complaint.transactionCompId)} style={styles.confirmButton}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
           <Text style={styles.confirmButtonText}>Confirm</Text>
+        )}
         </TouchableOpacity>
       </View>
     </View>
