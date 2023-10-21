@@ -64,6 +64,31 @@ const ViewReportsAdmin = () => {
   const handleClick = (report) => {
     navigation.navigate('View Report Details Admin', { report });
   };
+  const getMinutesAgo = (timestamp) => {
+    if (!timestamp) return null;
+  
+    const now = new Date();
+    const reportTime = new Date(timestamp);
+  
+    // Calculate the difference in milliseconds between the current time and the report time
+    const timeDiff = now.getTime() - reportTime.getTime();
+  
+    // Convert the time difference to seconds
+    const secondsAgo = Math.floor(timeDiff / 1000);
+  
+    if (secondsAgo < 60) {
+      return `${secondsAgo} seconds ago`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
+      return `${minutesAgo} minutes ago`;
+    } else if (secondsAgo < 86400) {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${hoursAgo} hours ago`;
+    } else {
+      const daysAgo = Math.floor(secondsAgo / 86400);
+      return `${daysAgo} days ago`;
+    }
+  };
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
     setIsFilterOpen(false); // Close the modal when a filter is selected
@@ -82,7 +107,7 @@ const ViewReportsAdmin = () => {
     <ScrollView >
 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20, marginTop:10, }}>
     <TouchableOpacity onPress={() => setIsFilterOpen(true)}>
-      <Text className = "bg-white rounded-md p-1" style={{ fontSize: 16, color: 'black' }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
+      <Text className = " rounded-md p-1" style={{ fontSize: 16, color: 'black' }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
     </TouchableOpacity>
   </View>
   <Modal visible={isFilterOpen} transparent={true} animationType='slide'>
@@ -138,6 +163,9 @@ const ViewReportsAdmin = () => {
           </Text>
           <Text className="text-lg ml-2 text-red-500">#REPORT_{report.transactionRepId}</Text>
         </View>
+        {report.timestamp && (
+          <Text className="ml-2">{getMinutesAgo(report.timestamp)}</Text>
+        )}
         <Text
           style={{
             position: 'absolute',

@@ -16,8 +16,8 @@ const ViewComplaints = () => {
   const filterOptions = ['All', 'Active', 'Pending', 'Ongoing', 'Completed', 'Cancelled'];
   const navigation = useNavigation();
   const [activeComplaintsCount, setActiveComplaintsCount] = useState(0);
-
- 
+  const [mapLayout, setMapLayout]=useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
     const auth = getAuth();
     const firestore = getFirestore();
@@ -151,7 +151,31 @@ const ViewComplaints = () => {
   const handleClick = (complaint) => {
     navigation.navigate('View Complaint Details',{complaint});
   };
-
+  const getMinutesAgo = (timestamp) => {
+    if (!timestamp) return null;
+  
+    const now = new Date();
+    const reportTime = new Date(timestamp);
+  
+    // Calculate the difference in milliseconds between the current time and the report time
+    const timeDiff = now.getTime() - reportTime.getTime();
+  
+    // Convert the time difference to seconds
+    const secondsAgo = Math.floor(timeDiff / 1000);
+  
+    if (secondsAgo < 60) {
+      return `${secondsAgo} seconds ago`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
+      return `${minutesAgo} minutes ago`;
+    } else if (secondsAgo < 86400) {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${hoursAgo} hours ago`;
+    } else {
+      const daysAgo = Math.floor(secondsAgo / 86400);
+      return `${daysAgo} days ago`;
+    }
+  };
   const handleCancelButtonPress = (complaintId) => {
     Alert.alert(
       'Cancel Complaint',
@@ -243,13 +267,16 @@ const ViewComplaints = () => {
         <View className="bg-white h-28 mx-4 rounded-lg">
           <Text className="text-lg font-bold ml-2">{complaint.name}</Text>
           <TouchableOpacity onPress={() => handleCancelButtonPress(complaint.transactionCompId)}>
+          {isLoading ? ( // Step 4: Conditionally render the activity indicator
+          <ActivityIndicator size="small" color="red" />
+        ) : (
           <Text style={{
             fontSize: 25,
           fontWeight: 'bold',
           position: 'absolute',
           right: 10,
           color: 'red',
-          transform: [{ translateY: -30 }], }}>X</Text>
+          transform: [{ translateY: -30 }], }}>X</Text>)}
         </TouchableOpacity>
           <Text className="ml-2">{complaint.date}</Text>
           <View>
@@ -258,6 +285,9 @@ const ViewComplaints = () => {
             </Text>
             <Text className="text-lg ml-2 text-red-500">#COMPLAINTS_{complaint.transactionCompId}</Text>
           </View>
+          {complaint.timestamp && (
+            <Text className="ml-2 ">{getMinutesAgo(complaint.timestamp)}</Text>
+          )}
           <Text
             style={{
               position: 'absolute',

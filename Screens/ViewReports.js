@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, ImageBackground, ScrollView, Alert} from 'react-native';
+import { View, Text,ActivityIndicator, TouchableOpacity, Modal, ImageBackground, ScrollView, Alert} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth, onAuthStateChanged} from '@firebase/auth';
@@ -16,7 +16,7 @@ const ViewReports = () => {
   const filterOptions = ['All', 'Active', 'Pending', 'Ongoing', 'Completed', 'Cancelled'];
   const [activeReportsCount, setActiveReportsCount] = useState(0);
   const navigation = useNavigation();
-
+  const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
     const auth = getAuth();
     const firestore = getFirestore();
@@ -148,7 +148,32 @@ const ViewReports = () => {
   const handleClick = (report) => {
     navigation.navigate('View Report Details',{report});
   };
-  const handleDeleteButtonPress = (reportId) => {
+  const getMinutesAgo = (timestamp) => {
+    if (!timestamp) return null;
+  
+    const now = new Date();
+    const reportTime = new Date(timestamp);
+  
+    // Calculate the difference in milliseconds between the current time and the report time
+    const timeDiff = now.getTime() - reportTime.getTime();
+  
+    // Convert the time difference to seconds
+    const secondsAgo = Math.floor(timeDiff / 1000);
+  
+    if (secondsAgo < 60) {
+      return `${secondsAgo} seconds ago`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
+      return `${minutesAgo} minutes ago`;
+    } else if (secondsAgo < 86400) {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${hoursAgo} hours ago`;
+    } else {
+      const daysAgo = Math.floor(secondsAgo / 86400);
+      return `${daysAgo} days ago`;
+    }
+  };
+  const handleDeleteButtonPress = (transactionRepId) => {
     Alert.alert(
       'Delete Report',
       'Are you sure you want to cancel the report?',
@@ -160,12 +185,26 @@ const ViewReports = () => {
         {
           text: 'Confirm',
           style: 'destructive',
-          onPress: () => deleteReport(reportId),
+          onPress: () => {
+            // Ensure that transactionRepId is defined before proceeding
+            if (transactionRepId) {
+              // Step 3: Set loading state to true
+              setIsLoading(true);
+              cancelReport(transactionRepId);
+            } else {
+              console.log('transactionRepId is undefined');
+            }
+          },
         },
       ],
     );
   };
   const cancelReport = async (transactionRepId) => {
+    if (!transactionRepId) {
+      console.log('transactionRepId is undefined');
+      return;
+    }
+  
     try {
       const db = getFirestore();
       const reportsRef = collection(db, 'Reports');
@@ -250,17 +289,22 @@ const ViewReports = () => {
     {filteredReports().map((report) => (
     <View key={report.transactionRepId} className="flex flex-col mt-5">
       <TouchableOpacity onPress={() => handleClick(report)}>
-        <View className="bg-white h-28 mx-4 rounded-lg">
+        <View className=" bg-white h-28 mx-4 rounded-lg">
           <Text className="text-lg font-bold ml-2">{report.name}</Text>
+          {report.status !== 'Completed' && report.status !== 'Cancelled' && report.status !== 'Ongoing' &&(
           <TouchableOpacity onPress={() => handleDeleteButtonPress(report.transactionRepId)}>
+          {isLoading ? ( // Step 4: Conditionally render the activity indicator
+          <ActivityIndicator size="small" color="red" />
+        ) : (
           <Text style={{
           fontWeight: 'bold',
           position: 'absolute',
           right: 10,
           color: 'red',
           fontSize: 20,
-          transform: [{ translateY: -30 }], }}>X</Text>
+          transform: [{ translateY: -30 }], }}>X</Text>)}
         </TouchableOpacity>
+          )}
           <Text className="ml-2">{report.date}</Text>
           <View>
             <Text className="ml-2">
@@ -268,6 +312,9 @@ const ViewReports = () => {
             </Text>
             <Text className="text-lg ml-2 text-red-500">#REPORT_{report.transactionRepId}</Text>
           </View>
+          {report.timestamp && (
+            <Text className="ml-2 ">{getMinutesAgo(report.timestamp)}</Text>
+          )}
           <Text
             style={{
               position: 'absolute',

@@ -170,7 +170,7 @@ const HomePage =()=>{
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text className="text-[#EF4444] font-bold text-lg">{userData.Fname} {userData.Lname}</Text>
         <TouchableOpacity onPress={handleStatsButtonPress}>
-        <Ionicons name="ios-stats-chart-sharp" size={30} color="black" style={{ marginLeft: 70 }} />
+        <Ionicons name="ios-stats-chart-sharp" size={30} color="black" style={{ marginLeft: 150, marginRight:10 }} />
         </TouchableOpacity>
       </View>
     </View>

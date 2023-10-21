@@ -204,17 +204,10 @@ const RegistrationForm = () => {
               rules={{
                 required: 'Mobile Number is required',
                 pattern: {
-                  value: /^[0-9]+$/,
-                  message: 'Only numbers are allowed',
-                },
-                minLength: {
-                  value: 11,
+                  value: /^[0-9]{11}$/, // Exactly 11 digits, only numbers allowed
                   message: 'Mobile Number must be 11 digits long',
                 },
-                maxLength: {
-                  value: 11,
-                  message: 'Mobile Number must be 11 digits long',
-                },
+              
               }}
               defaultValue=""
             />
@@ -246,35 +239,6 @@ const RegistrationForm = () => {
               rules={{ required: 'Barangay is required' }}
               defaultValue=""
             />
-
-            <Controller
-              control={control}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <>
-                  <Text className="ml-5 mb-2 text-sm">Select a Role</Text>
-                  <View className="justify-center w-11/12 h-12 py-3 rounded-lg border-2 border-[#E0E0E0] mx-auto mb-2">
-                    <Picker
-                      selectedValue={role}
-                      onValueChange={(value) => {
-                        setRole(value);
-                        onChange(value);
-                      }}
-                    >
-                      <Picker.Item label="Role" value="" />
-                      {roles.map((role) => (
-                        <Picker.Item key={role} label={role} value={role} />
-                      ))}
-                    </Picker>
-                  </View>
-                  {errors.role && <Text className="mx-auto color-red-500">{errors.role.message}</Text>}
-                  {roleError && <Text className="mx-auto color-red-500">{roleError}</Text>}
-                </>
-              )}
-              name="role"
-              rules={{ required: 'Role is required' }}
-              defaultValue=""
-            />
-
             <Controller
               control={control}
               render={({ field: { onChange, onBlur, value } }) => (

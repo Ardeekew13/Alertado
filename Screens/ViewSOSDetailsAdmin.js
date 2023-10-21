@@ -209,12 +209,25 @@ const ViewSOSDetailsAdmin = ({ route }) => {
       );
   
       if (!querySnapshot.empty) {
-        // Document exists, update the "status" field
-        const emergencyDocRef = querySnapshot.docs[0].ref;
-        await updateDoc(emergencyDocRef, { status: selectedStatus });
-        
-        // Close the modal
-        setModalVisible(false);
+        // Document exists, get the current status
+        const emergencyDocData = querySnapshot.docs[0].data();
+        const currentStatus = emergencyDocData.status;
+  
+        if (
+          (currentStatus === 'Completed' && selectedStatus !== 'Completed') ||
+          (currentStatus === 'Cancelled' && selectedStatus !== 'Cancelled') ||
+          (currentStatus === 'Ongoing' && selectedStatus !== 'Ongoing')
+        ) {
+          // Status change is not allowed, show an alert or handle it as needed
+          Alert.alert('Invalid Status Change', `You cannot change the status to ${selectedStatus} from ${currentStatus}.`);
+        } else {
+          // Valid status change, update the status
+          const emergencyDocRef = querySnapshot.docs[0].ref;
+          await updateDoc(emergencyDocRef, { status: selectedStatus });
+  
+          // Close the modal
+          setModalVisible(false);
+        }
       }
     } catch (error) {
       console.log('Error changing status:', error);
@@ -297,7 +310,9 @@ const ViewSOSDetailsAdmin = ({ route }) => {
       </View>
   
       <View style={styles.detailsContainer}>
+      {emergency.status === 'Pending' && (
         <Text style={styles.urgentHelpText}>Needs Urgent Help</Text>
+      )}
         <Text style={styles.normalText}>Name: <Text style={styles.boldText}> {emergency.userFirstName}</Text></Text>
         <Text style={styles.normalText}>Type of Emergency: <Text style={styles.boldText}> {emergency.type}</Text></Text>
         <Text style={styles.normalText}>Transaction ID:  <Text style={styles.boldText}> #{emergency.transactionSosId}</Text></Text>
@@ -318,10 +333,10 @@ const ViewSOSDetailsAdmin = ({ route }) => {
               :  emergency.status === 'Cancelled'
               ? 'red'
               : 'black',
-                  padding: 10,
+                  padding: 50,
                   borderRadius: 4,
                   zIndex: 1,
-                  width: 120,
+                  width: 140,
                },
         ]}
       > {emergency.status}</Text></Text>
@@ -350,38 +365,15 @@ const ViewSOSDetailsAdmin = ({ route }) => {
     
           {/* Modal for changing the status */}
           <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Change Status</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedStatus('Pending');
-                    handleStatusChange();
-                  }}
-                >
-                  <Text style={styles.modalOption}>Pending</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedStatus('Ongoing');
-                    handleStatusChange();
-                  }}
-                >
-                  <Text style={styles.modalOption}>Ongoing</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedStatus('Cancelled');
-                    handleStatusChange();
-                  }}
-                >
-                  <Text style={styles.modalOption}>Cancelled</Text>
-                </TouchableOpacity>
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Change Status</Text>
+              {(emergency.status === 'Pending' || emergency.status === 'Ongoing') && (
                 <TouchableOpacity
                   onPress={() => {
                     setSelectedStatus('Completed');
@@ -390,14 +382,25 @@ const ViewSOSDetailsAdmin = ({ route }) => {
                 >
                   <Text style={styles.modalOption}>Completed</Text>
                 </TouchableOpacity>
+              )}
+              {emergency.status !== 'Completed' && (
                 <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
+                  onPress={() => {
+                    setSelectedStatus('Cancelled');
+                    handleStatusChange();
+                  }}
                 >
-                  <Text style={styles.modalOption}>Cancel</Text>
+                  <Text style={styles.modalOption}>Cancelled</Text>
                 </TouchableOpacity>
-              </View>
+              )}
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.modalOption}>Cancel change</Text>
+              </TouchableOpacity>
             </View>
-          </Modal>
+          </View>
+        </Modal>
           </View>
         </ScrollView>
       );

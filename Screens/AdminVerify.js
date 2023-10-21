@@ -13,7 +13,7 @@ const AdminVerify = () => {
     useEffect(() => {
       const db = getFirestore();
       const usersCollection = collection(db, 'User');
-      const unverifiedUsersQuery = query(usersCollection, where('status', '==', 'Pending'));
+      const unverifiedUsersQuery = query(usersCollection, where('status', '==', 'Pending',));
       const unsubscribe = onSnapshot(unverifiedUsersQuery, querySnapshot => {
         const users = [];
   

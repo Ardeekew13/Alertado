@@ -10,6 +10,7 @@ import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} f
 import firebaseConfig from '../firebaseConfig';
 import { AntDesign, Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons'; 
 import { BlurView } from '@react-native-community/blur';
+import { updatePassword } from 'firebase/auth';
 
 
 const storage = getStorage(firebaseConfig);
@@ -36,6 +37,7 @@ const Profile = () => {
   const [imageUri, setImageUri] = useState(null);
   const [uploading,setUploading]=useState(false);
   const navigation=useNavigation()
+  const [selectedBarangay, setSelectedBarangay] = useState('');
 
   useEffect(() => {
     const currentUser = getAuth().currentUser;
@@ -129,21 +131,26 @@ const addressChange = async () => {
 };
 const passwordChange = async () => {
   try {
-    const currentUser = getAuth().currentUser;
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    // Update the authentication password
+    await updatePassword(currentUser, newPassword);
+
+    // If the authentication password has been successfully updated,
+    // you can also update the Firestore password field if needed
     const db = getFirestore();
     const userRef = doc(db, 'User', currentUser.uid);
-    
-    if (newPassword === newConfirmPassword) {
-      await updateDoc(userRef, { 
-        password: newPassword, 
-      });
-      setIsAddressModalOpen(false);
-    } else {
-      console.error('New password and new confirm password do not match');
-      // Handle the error or display an error message to the user
-    }
+
+    await updateDoc(userRef, { 
+      password: newPassword, 
+      confirmPassword: newConfirmPassword,
+    });
+
+    setIsPasswordModalOpen(false);
   } catch (error) {
     console.error('Error updating password', error);
+    // Handle errors or display error messages here
   }
 };
 const uploadImage = async () => {
@@ -198,14 +205,14 @@ return (
     <View className="justify-left">
     </View>
     </View>
-    <View className="flex flex-row">
+    <View className="flex flex-row  pr-10 pl-10 mb-5 mt-2">
       
       {image && <Image className="flex ml-2 mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
       {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50}} />}
       {!image && !userData.selfiePicture && <Image className="flex justify-left ml-4 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
       
-      <View className="flex ml-2 mt-4 mb-4">
-        <Text className=" text-2xl font-semibold">{userData.Lname}, {userData.Fname}</Text>
+      <View className="flex ml-2 mt-6 mb-4 pl-5">
+        <Text className=" text-2xl font-semibold ">{userData.Lname}, {userData.Fname}</Text>
         <Text
   style={{
     width: userData.status === 'Unverified' ? 90 : 70,
@@ -300,8 +307,8 @@ return (
             <View className="flex items-center justify-center my-auto w-96 ">
             <View className="bg-white rounded-lg p-4">
                <Text className="text-xl font-semibold mb-4">Enter your new Password</Text>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Enter your new password' value={newPassword} onChangeText={setNewPassword}/>
-               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Confirm password' value={newConfirmPassword} onChangeText={setNewConfirmPassword}/>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Enter your new password' value={newPassword} onChangeText={setNewPassword} secureTextEntry={true}/>
+               <TextInput className="border-gray-300 border-solid border-2 p-2 rounded-md mb-4" placeholder='Confirm password' value={newConfirmPassword} onChangeText={setNewConfirmPassword} secureTextEntry={true}/>
                 <TouchableOpacity className="bg-[#D01010] text-white py-2 px-4 rounded-md mx-2 mb-2" onPress={passwordChange}>
                  <Text className="font-semibold ">Save</Text>
                    </TouchableOpacity>

@@ -10,6 +10,7 @@ import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} f
 import firebaseConfig from '../firebaseConfig';
 import { AntDesign, Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons'; 
 import { BlurView } from '@react-native-community/blur';
+import { updatePassword } from 'firebase/auth';
 
 
 const storage = getStorage(firebaseConfig);
@@ -129,21 +130,26 @@ const addressChange = async () => {
 };
 const passwordChange = async () => {
   try {
-    const currentUser = getAuth().currentUser;
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    // Update the authentication password
+    await updatePassword(currentUser, newPassword);
+
+    // If the authentication password has been successfully updated,
+    // you can also update the Firestore password field if needed
     const db = getFirestore();
     const userRef = doc(db, 'User', currentUser.uid);
-    
-    if (newPassword === newConfirmPassword) {
-      await updateDoc(userRef, { 
-        password: newPassword, 
-      });
-      setIsPasswordModalOpen(false);
-    } else {
-      console.error('New password and new confirm password do not match');
-      // Handle the error or display an error message to the user
-    }
+
+    await updateDoc(userRef, { 
+      password: newPassword, 
+      confirmPassword: newConfirmPassword,
+    });
+
+    setIsPasswordModalOpen(false);
   } catch (error) {
     console.error('Error updating password', error);
+    // Handle errors or display error messages here
   }
 };
 const uploadImage = async () => {
@@ -198,10 +204,10 @@ return (
     <View className="justify-left">
     </View>
     </View>
-    <View className="flex flex-row">
+    <View className="flex flex-row justify-center mb-2 mt-2 ">
       
       {image && <Image className="flex ml-2 mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
-      {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50}} />}
+      {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50,}} />}
       {!image && !userData.selfiePicture && <Image className="flex justify-left ml-4 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
       
       <View className="flex ml-2 mt-4 mb-4">

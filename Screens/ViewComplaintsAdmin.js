@@ -71,14 +71,38 @@ const ViewComplaintsAdmin = () => {
     }
   };
   const handleClick = (complaint) => {
-    navigation.navigate('View Complaint Details Admin', { complaint });
+    navigation.navigate('View Complaint Details Admin', { complaint,  transactionCompId: complaint.transactionCompId, });
   };
-
+  const getMinutesAgo = (timestamp) => {
+    if (!timestamp) return null;
+  
+    const now = new Date();
+    const reportTime = new Date(timestamp);
+  
+    // Calculate the difference in milliseconds between the current time and the report time
+    const timeDiff = now.getTime() - reportTime.getTime();
+  
+    // Convert the time difference to seconds
+    const secondsAgo = Math.floor(timeDiff / 1000);
+  
+    if (secondsAgo < 60) {
+      return `${secondsAgo} seconds ago`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
+      return `${minutesAgo} minutes ago`;
+    } else if (secondsAgo < 86400) {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${hoursAgo} hours ago`;
+    } else {
+      const daysAgo = Math.floor(secondsAgo / 86400);
+      return `${daysAgo} days ago`;
+    }
+  };
   return (
     <View className="flex-1">
     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginRight: 20 }}>
     <TouchableOpacity onPress={() => setIsFilterOpen(true)}>
-    <Text className = "bg-white p-1 rounded-md" style={{ fontSize: 16, color: 'black', marginTop:5, }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
+    <Text className = " p-1 rounded-md" style={{ fontSize: 16, color: 'black', marginTop:5, }}>Filter: <Text style={{ fontSize: 16, color: 'black', fontWeight:'bold' }}>{selectedFilter}</Text></Text>
   </TouchableOpacity>
   </View>
   <Modal visible={isFilterOpen} transparent={true} animationType='slide'>
@@ -120,6 +144,9 @@ const ViewComplaintsAdmin = () => {
               </Text>
               <Text className="text-lg ml-2 text-red-500">#COMPLAINTS_{complaint.transactionCompId}</Text>
             </View>
+            {complaint.timestamp && (
+              <Text className="ml-2 ">{getMinutesAgo(complaint.timestamp)}</Text>
+            )}
             <Text
               style={{
                 position: 'absolute',

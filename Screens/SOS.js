@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
 import { doc, addDoc, collection, getDoc, setDoc, runTransaction,getDocs,getFirestore, updateDoc, onSnapshot, query, where } from 'firebase/firestore';
 import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -49,6 +49,7 @@ const SOS = () => {
   const [hasOngoingSOS, setHasOngoingSOS] = useState(false);
   const [emergencyType, setEmergencyType] = useState(null);
   const [userSosStatus, setUserSosStatus] = useState(null);
+  const [cancelledSOS, setCancelledSOS]  = useState(false);
   const [userSosLocation, setUserSosLocation] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [policeLocation, setPoliceLocation] = useState(null);
@@ -67,6 +68,7 @@ const SOS = () => {
   const [pingingPosition, setPingingPosition] = useState(null);
   const [pingingAngle, setPingingAngle] = useState(0);
   const [mapKey, setMapKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [userData, setUserData] = useState(null);
   const [initialRegion, setInitialRegion] = useState({
     // Set initial latitude and longitude based on userSosLocation
@@ -96,7 +98,7 @@ const SOS = () => {
         const sosQuery = query(
             collection(db, 'Emergencies'),
             where('userId', '==', currentUser.uid),
-            where('status', 'in', ['Pending', 'Ongoing'])
+            where('status', 'in', ['Pending', 'Ongoing',''])
         );
 
         const unsubscribe = onSnapshot(sosQuery, async (snapshot) => {
@@ -104,7 +106,7 @@ const SOS = () => {
           let hasOngoingSOS = false;
           let pendingSOSData = null;
           let ongoingSOSData = null;
-        
+          let cancelledSOS = false;
           for (const doc of snapshot.docs) {
             const sosData = doc.data();
 
@@ -129,6 +131,14 @@ const SOS = () => {
             if (sosData.status === 'Pending') {
               hasPendingSOS = true;
               pendingSOSData = sosData;
+             
+            }
+            if (sosData.status === 'Cancelled'||sosData.status === '') {
+              hasOngoingSOS = false;
+              hasPendingSOS = false;
+              cancelledSOS= true;
+
+             
             }
           }
         
@@ -139,6 +149,7 @@ const SOS = () => {
           setHasOngoingSOS(hasOngoingSOS);
           setPendingSOSData(pendingSOSData);
           setOngoingSOSData(ongoingSOSData);
+      
         });
         return unsubscribe;
     } 
@@ -264,7 +275,7 @@ const SOS = () => {
       const sosQuery = query(
         collection(db, 'Emergencies'),
         where('userId', '==', currentUser.uid),
-        where('status', '==', 'Pending') // Optional: You can add this condition to only cancel pending emergencies.
+        where('status', '==', 'Pending') 
       );
   
       const querySnapshot = await getDocs(sosQuery);
@@ -276,10 +287,22 @@ const SOS = () => {
   
       // Assuming there's only one pending SOS document for the current user
       const sosDoc = querySnapshot.docs[0];
-      
+      console.log('Cancelling SOS for user:', currentUser.uid);
       // Update the status field to "Cancelled"
       await updateDoc(sosDoc.ref, { status: 'Cancelled' });
-      
+     setHasPendingSOS(false);
+     Alert.alert(
+      'Cancelled!',
+      'SOS sent is cancelled',
+      [
+        {
+          text: 'OK',
+          onPress: () => {}, // Remove the navigation from here
+          style: 'cancel',
+        },
+      ],
+      { textAlign: 'center' }
+    );
       console.log('SOS status updated to "Cancelled" successfully');
     } catch (error) {
       console.error('Error cancelling SOS:', error);
@@ -288,8 +311,9 @@ const SOS = () => {
     // Hide the "Waiting for Police" UI
     setIsWaitingForPolice(false);
   };
-  const handleCancel = async () => {
+  const handleCancel = async (currentUser) => {
     if (userSosStatus === 'Pending') {
+       console.log('Cancelling SOS...');
       cancelEmergency(currentUser);
     }
   };
@@ -341,7 +365,7 @@ const SOS = () => {
           status: 'Pending',
           userId: currentUser.uid,
         });
-  
+        setIsLoading(false); // Set isLoading to false when the submission is complete
         Alert.alert(
           'SOS Successful!',
           'Help is on the way.',
@@ -355,6 +379,7 @@ const SOS = () => {
           { textAlign: 'center' }
         );
       } catch (error) {
+        setIsLoading(false); // Set isLoading to false when an error occurs
         console.error('Error submitting emergency:', error);
         Alert.alert(
           'Error',
@@ -370,9 +395,10 @@ const SOS = () => {
       }
     }
   };
+ 
   return (
     <SafeAreaView style={styles.container}>
-    { hasOngoingSOS ? (
+    { hasOngoingSOS && userSosStatus !== 'Cancelled' ? (
         <View style={styles.container}>
         <View style={styles.ongoingContainer}>
         <MapView
@@ -392,7 +418,7 @@ const SOS = () => {
             flat={true} // Ensure the image doesn't tilt with the map
           >
               <Image
-                source={require('./images/SosPIN.png')} // Replace with the path to your custom marker image
+                source={require('./images/SosPIN.png')} 
                 style={{
                   width: 40,
                   height: 42, // Use the same dimensions as your custom image
@@ -406,7 +432,7 @@ const SOS = () => {
             <Marker coordinate={policeLocation}
             anchor={{ x: 0.5, y: 0.5 }}>
               <Image
-                source={require('./images/policeCircle.png')} // Replace with the actual path to your circular image
+                source={require('./images/policeCircle.png')} 
                 style={{ width: 40, height: 40 }} // Adjust the size as needed
               />
             </Marker>
@@ -465,7 +491,7 @@ const SOS = () => {
                   coordinate={userSosLocation}
                 >
                   <Image
-                    source={require('./images/SosPIN.png')} // Replace with the path to your custom marker image
+                    source={require('./images/SosPIN.png')} 
                     style={{ width: 40, height: 43 }} // Adjust the size as needed
                   />
                 </Marker>
@@ -490,7 +516,16 @@ const SOS = () => {
           </TouchableOpacity>
         </View>
       ) :(
-      <>
+        <>
+        {isLoading ? (
+          // Display loading state while submitting
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="blue" />
+            <Text style={styles.loadingText}>Submitting SOS...</Text>
+          </View>
+        ) : (
+          <>
+      
       <View style={styles.mainContainer}>
           <Text style={styles.text}>
             Feeling unsafe? Tap SOS alert for immediate help in emergencies. Your safety matters!
@@ -524,41 +559,48 @@ const SOS = () => {
       </View>
       </>
       )}
+      </>
+      )}
       {(emergencyType && currentLocation && !isWaitingForPolice) ? (
-        <>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>
-            <Ionicons name="ios-arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-  
-          <View style={styles.mapContainer}>
-            <MapView
-              key={mapKey}
-              style={styles.map}
-              initialRegion={initialRegion}
-              onLayout={() => setIsMapReady(true)}
-              ref={mapRef}
-            >
-              {markerPosition  && isMapReady &&(
-                <Marker
-                  coordinate={currentLocation}
-                  draggable
-                  onDragEnd={handleMarkerDragEnd}
-                />
-              )}
-              {currentLocation && isMapReady && (
-                <Circle
-                  center={currentLocation}
-                  radius={200}
-                  fillColor="rgba(0, 128, 255, 0.2)"
-                  strokeColor="rgba(0, 128, 255, 0.5)"
-                />
-              )}
-            </MapView>
-            <TouchableOpacity style={styles.submitButton} onPress={submitEmergency}>
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+            <>
+              <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>
+                <Ionicons name="ios-arrow-back" size={24} color="black" />
+              </TouchableOpacity>
+              <View style={styles.mapContainer}>
+                <MapView
+                  key={mapKey}
+                  style={styles.map}
+                  initialRegion={initialRegion}
+                  onLayout={() => setIsMapReady(true)}
+                  ref={mapRef}
+                >
+                  {markerPosition && isMapReady && (
+                    <Marker
+                      coordinate={currentLocation}
+                      draggable
+                      onDragEnd={handleMarkerDragEnd}
+                    />
+                  )}
+                  {currentLocation && isMapReady && (
+                    <Circle
+                      center={currentLocation}
+                      radius={200}
+                      fillColor="rgba(0, 128, 255, 0.2)"
+                      strokeColor="rgba(0, 128, 255, 0.5)"
+                    />
+                  )}
+                </MapView>
+                <TouchableOpacity
+                style={styles.submitButton}
+                onPress={() => {
+                  setIsLoading(true); // Set isLoading to true when the button is pressed
+                  submitEmergency(); // Call the submitEmergency function
+                }}
+              >
+                <Text style={styles.submitButtonText}>Submit</Text>
+              </TouchableOpacity>
+              </View>
+            </>
       ) : null}
       {(emergencyType && markerPosition && isWaitingForPolice && hasPendingSOS) ? (
         <View style={styles.waitingContainer}>
@@ -589,7 +631,7 @@ const SOS = () => {
           </MapView>
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => handleCancel(currentUser)} // Pass 'emergency' and 'currentUser'
+            onPress={() => handleCancel(currentUser)}
           >
             <View style={styles.cancelButtonInner}>
               <Text style={styles.cancelButtonText}>Cancel SOS</Text>
@@ -631,6 +673,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  loadingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'black',
   },
   sosButtonText: {
     fontSize: 16,

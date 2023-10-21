@@ -94,7 +94,31 @@ const ViewReportsPolice = () => {
       ],
     );
   };
-
+  const getMinutesAgo = (timestamp) => {
+    if (!timestamp) return null;
+  
+    const now = new Date();
+    const reportTime = new Date(timestamp);
+  
+    // Calculate the difference in milliseconds between the current time and the report time
+    const timeDiff = now.getTime() - reportTime.getTime();
+  
+    // Convert the time difference to seconds
+    const secondsAgo = Math.floor(timeDiff / 1000);
+  
+    if (secondsAgo < 60) {
+      return `${secondsAgo} seconds ago`;
+    } else if (secondsAgo < 3600) {
+      const minutesAgo = Math.floor(secondsAgo / 60);
+      return `${minutesAgo} minutes ago`;
+    } else if (secondsAgo < 86400) {
+      const hoursAgo = Math.floor(secondsAgo / 3600);
+      return `${hoursAgo} hours ago`;
+    } else {
+      const daysAgo = Math.floor(secondsAgo / 86400);
+      return `${daysAgo} days ago`;
+    }
+  };
   const updateReportStatus = async (transactionRepId) => {
     try {
       const db = getFirestore();
@@ -159,7 +183,7 @@ const ViewReportsPolice = () => {
   {filteredReports().map((report) => (
   <View key={report.transactionRepId} className="flex flex-col mt-5">
     <TouchableOpacity onPress={() => handleClick(report)}>
-      <View className="bg-white h-28 mx-4 rounded-lg">
+      <View className=" bg-white h-28 mx-4 rounded-lg">
         <Text className="text-lg font-bold ml-2">{report.name}</Text>
         <TouchableOpacity onPress={() => handleCancelButtonPress(report.transactionRepId)}>
         <Text style={{
@@ -177,6 +201,9 @@ const ViewReportsPolice = () => {
           </Text>
           <Text className="text-lg ml-2 text-red-500">#REPORT_{report.transactionRepId}</Text>
         </View>
+        {report.timestamp && (
+          <Text className="ml-2 ">{getMinutesAgo(report.timestamp)}</Text>
+        )}
         <Text
           style={{
             position: 'absolute',
@@ -184,20 +211,20 @@ const ViewReportsPolice = () => {
             right: 8,
             transform: [{ translateY: -8 }],
             backgroundColor:
-      report.status === 'Pending'
-        ? 'orange'
-        : report.status === 'Ongoing'
-        ? '#186EEE'
-        : report.status === 'Completed'
-        ? 'green'
-        : report.status === 'Cancelled'
-        ? 'red'
-        : 'black',
-            padding: 8,
-            borderRadius: 4,
-            zIndex: 1,
-          }}
-        >
+            report.status === 'Pending'
+              ? 'orange'
+              : report.status === 'Ongoing'
+              ? '#186EEE'
+              : report.status === 'Completed'
+              ? 'green'
+              : report.status === 'Cancelled'
+              ? 'red'
+              : 'black',
+                  padding: 8,
+                  borderRadius: 4,
+                  zIndex: 1,
+                }}
+              >
           {report.status}
           
         </Text>

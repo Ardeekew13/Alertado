@@ -1,4 +1,4 @@
-import {Alert, ScrollView, View, Text, StyleSheet, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal } from 'react-native'
+import {Alert, ScrollView, View, Text, StyleSheet, TextInput,SafeAreaView,TouchableOpacity,Keyboard,TouchableWithoutFeedback, Modal, ActivityIndicator } from 'react-native'
 import { db,authentication } from '../firebaseConfig';
 import React, { useState, useEffect,useRef } from 'react';
 import firestore  from '@react-native-firebase/firestore';
@@ -61,7 +61,7 @@ const ReportCrime =()=>{
   const [barangay,setBarangay] =useState('')
   const [street,setStreet] =useState('')
   const [message,setMessage] =useState('')
-  const [wanted,setWanted] =useState('')
+  const [wanted, setWanted] = useState('No');
   const [complainee,setComplainee] =useState('')
   const [nameError, setNameError]= useState('');
   const [detailsError, setDetailsError]= useState('');
@@ -77,6 +77,8 @@ const ReportCrime =()=>{
   const [userLocation, setUserLocation] = useState(null);
   const mapRef = useRef(null);
   const userMovedMap = useRef(false);
+  const [loading, setLoading] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -107,6 +109,7 @@ const ReportCrime =()=>{
         });
         setMarkerPosition({ latitude, longitude });
         setUserLocation({ latitude, longitude });
+        setMapReady(true); 
       } catch (error) {
         console.error('Error getting current location', error);
       }
@@ -116,7 +119,9 @@ const ReportCrime =()=>{
   
     fetchData();
   }, []);
-  
+  const handleWantedChange = (selectedValue) => {
+    setWanted(selectedValue);
+  };
   function handleOnPress (){
     setOpen(!open);
   }
@@ -138,7 +143,8 @@ const pressSubmit = async ()=>{
     } 
     try {
       const db = getFirestore();
-      
+      setLoading(true);
+
       const transactionNumberDoc = doc(db, 'TransactionRep', 'transactionRepId');
       const transactionSnapshot = await getDoc(transactionNumberDoc);
     
@@ -157,6 +163,7 @@ const pressSubmit = async ()=>{
       latitude: markerPosition.latitude,
       longitude: markerPosition.longitude,
     };
+    const currentDate = new Date();
     const userDoc = doc(collection(db, 'Reports'));
     await setDoc(userDoc,{
     userId: currentUser.uid,
@@ -171,6 +178,7 @@ const pressSubmit = async ()=>{
     status: 'Pending',
     transactionRepId,
     location,
+    timestamp: currentDate.toISOString(),
     });
   const barangayDocRef = doc(db, 'barangayCounts', barangay);
 const barangaySnapshot = await getDoc(barangayDocRef);
@@ -187,7 +195,7 @@ setBarangayCounts(prevCounts => ({
   [barangay]: (prevCounts[barangay] || 0) + 1,
 }));
 
-    
+     setLoading(false);
       Alert.alert('Report Successful!', 'Your report is under review.', [
         {
           text: 'OK',
@@ -196,6 +204,7 @@ setBarangayCounts(prevCounts => ({
         },
       ], { textAlign: 'center' });
     } catch (error) {
+      setLoading(false);
       console.error('Error adding user:', error);
       Alert.alert('Error', 'An error occurred while reporting.', [
         {
@@ -260,12 +269,17 @@ const onUserLocationChange = (location) => {
        style={{ textAlignVertical: 'top', paddingTop: 10, }} 
      />
      <Text className="ml-5 mb-2 text-sm">Was the suspect wanted/have or had any charges against him/her</Text>
-     <TextInput
-    className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
-    placeholder='Yes or No, I dont know'
-    value={wanted}
-    onChangeText={(wanted)=>{setWanted(wanted)}}
-     />
+     <View className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2 h-10 justify-center" >
+       <Picker
+         selectedValue={wanted}
+         onValueChange={(itemValue) => handleWantedChange(itemValue)}
+         style={{ height: 40, width: '100%' }}
+       >
+         <Picker.Item label="Yes" value="Yes" />
+         <Picker.Item label="No" value="No" />
+         <Picker.Item label="I don't know" value="I don't know" />
+       </Picker>
+     </View>
     <Text className="ml-5 mb-2 text-sm">Complainee</Text>
     <TextInput
     className="border-0.5 w-11/12 px-4 py-3 rounded-lg bg-gray-100 mx-auto mb-2"
@@ -326,39 +340,47 @@ const onUserLocationChange = (location) => {
      ))}
    </Picker>
    </View>
-   {initialRegion ? (
+   {mapReady ? (
     <MapView
-          style={styles.map}
-          onRegionChange={onRegionChange}
-          initialRegion={initialRegion}
-          ref={mapRef}
-          onPanDrag={onMapPanDrag}
-        >
-          {markerPosition && (
-            <Marker
-              coordinate={markerPosition}
-              draggable
-              onDragEnd={onMarkerDragEnd}
-            />
-          )}
-          {userLocation && (
-            <Circle
-              center={userLocation}
-              radius={200}
-              fillColor="rgba(0, 128, 255, 0.2)"
-              strokeColor="rgba(0, 128, 255, 0.5)"
-            />
+      style={styles.map}
+      onMapReady={() => setMapReady(true)}
+      onRegionChange={onRegionChange}
+      initialRegion={initialRegion}
+      ref={mapRef}
+      onPanDrag={onMapPanDrag}
+    >
+      {markerPosition && (
+        <Marker
+          coordinate={markerPosition}
+          draggable
+          onDragEnd={onMarkerDragEnd}
+        />
+      )}
+      {userLocation && (
+        <Circle
+          center={userLocation}
+          radius={200}
+          fillColor="rgba(0, 128, 255, 0.2)"
+          strokeColor="rgba(0, 128, 255, 0.5)"
+        />
       )}
     </MapView>
   ) : (
-    <Text>Loading...</Text>
+    <Text>Loading Map...</Text>
   )}
     <TouchableOpacity
     className="w-11/12 mt-4 px-4 py-3 rounded-lg bg-red-700 items-center mx-auto mb-4"
     onPress={pressSubmit}
+    disabled={loading}
   >
-    <Text className="text-white text-lg font-medium mx-auto">Submit</Text>
-  </TouchableOpacity>
+  {loading ? ( // Display ActivityIndicator while loading
+  <ActivityIndicator color="white" />
+) : (
+  <Text className="text-white text-lg font-medium mx-auto">
+    Submit
+  </Text>
+)}
+</TouchableOpacity>
 
     </View>
     </TouchableWithoutFeedback>

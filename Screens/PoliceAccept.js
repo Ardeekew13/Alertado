@@ -307,6 +307,21 @@ const PoliceAccept = ({ route }) => {
         // Document exists, update the "status" field to "Completed"
         const emergencyDocRef = querySnapshot.docs[0].ref;
         await updateDoc(emergencyDocRef, { status: 'Completed' });
+        Alert.alert(
+          'Completed!',
+          'The SOS has been marked as completed.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate back to ViewSOSPolice
+                navigation.navigate('ViewSOSPolice');
+              },
+              style: 'cancel',
+            },
+          ],
+          { textAlign: 'center' }
+        );
         console.log('Status updated to Completed');
       } else {
         console.log('Emergency document with the given transactionSosId does not exist.');
@@ -429,163 +444,168 @@ const PoliceAccept = ({ route }) => {
   };
   return (
     <View style={{ flex: 1 }}>
-    {directionsFetched ? (
-      <View style={{ flex: 1 }}>
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          initialRegion={{
-            // Set the initial region for the new MapView here
-            latitude: (routeCoordinates[0] && routeCoordinates[0].latitude) || 0,
-            longitude: (routeCoordinates[0] && routeCoordinates[0].longitude) || 0,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-        >
-          {/* Render the Polyline */}
-          {routeCoordinates && (
-            <Polyline
-              coordinates={routeCoordinates}
-              strokeColor="blue"
-              strokeWidth={4}
-            />
-          )}
-    
-    
-          {/* Render a custom marker for citizenLocation (or sosLocation) */}
-          {sosLocation && (
-            <CustomMarker
-              coordinate={sosLocation}
-              zoomLevel={zoomLevel} // If needed, adjust the zoom level
-              title="Citizen"
-            />
-          )}
-    
-          {/* Render a marker for policeRealTimeLocation */}
-          {policeLocation && (
-            <Marker
-              coordinate={policeLocation}
-              anchor={{ x: 0.5, y: 0.5 }}
-              title="Police (Real Time)"
+      {emergency.status !== 'Completed' && emergency.status !== 'Cancelled' ? (
+        <View style={{ flex: 1 }}>
+          {directionsFetched ? (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              initialRegion={{
+                // Set the initial region for the new MapView here
+                latitude: (routeCoordinates[0] && routeCoordinates[0].latitude) || 0,
+                longitude: (routeCoordinates[0] && routeCoordinates[0].longitude) || 0,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
             >
-              <Image
-                source={require('./images/policeCircle.png')} // Replace with the actual path to your real-time police marker image
-                style={{ width: 40, height: 43 }} // Adjust the size as needed
-              />
-            </Marker>
+              {/* Render the Polyline */}
+              {routeCoordinates && (
+                <Polyline
+                  coordinates={routeCoordinates}
+                  strokeColor="blue"
+                  strokeWidth={4}
+                />
+                )}
+  
+              {/* Render a custom marker for citizenLocation (or sosLocation) */}
+              {sosLocation && (
+                <CustomMarker
+                  coordinate={sosLocation}
+                  zoomLevel={zoomLevel} // If needed, adjust the zoom level
+                  title="Citizen"
+                />
+                )}
+  
+              {/* Render a marker for policeRealTimeLocation */}
+              {policeLocation && (
+                <Marker
+                  coordinate={policeLocation}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                  title="Police (Real Time)"
+                >
+                  <Image
+                    source={require('./images/policeCircle.png')} // Replace with the actual path to your real-time police marker image
+                    style={{ width: 40, height: 43 }} // Adjust the size as needed
+                  />
+                </Marker>
+                )}
+  
+              {policeLocation && (
+                <Circle
+                  center={policeLocation}
+                  radius={300}
+                  fillColor="rgba(0, 128, 255, 0.2)"
+                  strokeColor="rgba(0, 128, 255, 0.5)"
+                />
+                )}
+            </MapView>
+          ) : (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              initialRegion={{
+                latitude: userSosLocation ? userSosLocation.latitude : 9.8500,
+                longitude: userSosLocation ? userSosLocation.longitude : 124.1430,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
+              onRegionChange={(region) => {
+                const calculatedZoomLevel = 1 / region.latitudeDelta;
+                setZoomLevel(calculatedZoomLevel);
+              }}
+            >
+              {policeLocation && (
+                <Marker
+                  coordinate={policeLocation}
+                  title="Police"
+                  draggable
+                  onDragEnd={handlePoliceMarkerDragEnd}
+                >
+                  <Image
+                    source={require('./images/PolicePin.png')} // Replace with the actual path to your circular image
+                    style={{ width: 40, height: 43 }} // Adjust the size as needed
+                  />
+                </Marker>
+                )}
+              {sosLocation && (
+                <Circle
+                  center={sosLocation}
+                  radius={500}
+                  fillColor="rgba(0, 128, 255, 0.2)"
+                  strokeColor="rgba(0, 128, 255, 0.5)"
+                />
+                )}
+              {sosLocation && (
+                <Marker
+                  coordinate={sosLocation}
+                >
+                  <Image
+                    source={require('./images/SosPIN.png')} // Replace with the actual path to your circular image
+                    style={{ width: 40, height: 42 }} // Adjust the size as needed
+                  />
+                </Marker>
+                )}
+              {routeCoordinates && (
+                <Polyline
+                  coordinates={routeCoordinates}
+                  strokeColor="blue"
+                  strokeWidth={4}
+                />
+                )}
+            </MapView>
           )}
-    
-          {policeLocation && (
-            <Circle
-              center={policeLocation}
-              radius={300}
-              fillColor="rgba(0, 128, 255, 0.2)"
-              strokeColor="rgba(0, 128, 255, 0.5)"
+          {!directionsFetched ? (
+            <Button
+              title={isProcessing ? 'Processing...' : 'Submit'}
+              onPress={async () => {
+                console.log('Submit button clicked.');
+                setIsSubmitPressed(true);
+                setIsProcessing(true); // Set isProcessing to true when the button is clicked
+  
+                // Your asynchronous operations here
+                await savePoliceLocationToFirestore();
+                fetchDirectionsGeoapify();
+  
+                setIsProcessing(false); // Set isProcessing back to false when the operations are done
+              }}
+              disabled={isProcessing} // Disable the button when it's processing
             />
-          )}
-        </MapView>
-      </View>
-    ) : (
-      
-      // Render the original MapView while directions are not fetched
-      <MapView
-    ref={mapRef}
-    style={styles.map}
-    initialRegion={{
-      latitude: userSosLocation ? userSosLocation.latitude : 9.8500,
-      longitude: userSosLocation ? userSosLocation.longitude : 124.1430,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    }}
-    onRegionChange={(region) => {
-      const calculatedZoomLevel = 1 / region.latitudeDelta;
-      setZoomLevel(calculatedZoomLevel);
-    }}
-  >
-    {policeLocation && (
-      <Marker
-        coordinate={policeLocation}
-        title="Police"
-        draggable
-        onDragEnd={handlePoliceMarkerDragEnd}
-      >
-      <Image
-      source={require('./images/PolicePin.png')} // Replace with the actual path to your circular image
-      style={{ width: 40, height: 43}} // Adjust the size as needed
-    />
-      </Marker>
-    )}
-    {sosLocation && (
-      <Circle
-        center={sosLocation}
-        radius={500}
-        fillColor="rgba(0, 128, 255, 0.2)"
-        strokeColor="rgba(0, 128, 255, 0.5)"
-      />
-    )}
-    {sosLocation && (
-      <Marker 
-      coordinate={sosLocation}
-           >
-              <Image
-                source={require('./images/SosPIN.png')} // Replace with the actual path to your circular image
-                style={{ width: 40, height: 42}} // Adjust the size as needed
+          ) : (
+            <View style={styles.directionsContainer}>
+              <Text style={styles.helpText}>Help is on the way</Text>
+              <TextInput
+                style={styles.feedbackInput}
+                placeholder="Enter police feedback"
+                onChangeText={(text) => setPoliceFeedback(text)}
+                value={policeFeedback}
               />
-            </Marker>
-    )}
-    
-    {routeCoordinates && (
-      <Polyline
-        coordinates={routeCoordinates}
-        strokeColor="blue"
-        strokeWidth={4}
-      />
-    )}
-  </MapView>
-    )}
-    {!directionsFetched ? (
-      <Button
-  title={isProcessing ? 'Processing...' : 'Submit'}
-  onPress={async () => {
-    console.log('Submit button clicked.');
-    setIsSubmitPressed(true);
-    setIsProcessing(true); // Set isProcessing to true when the button is clicked
-
-    // Your asynchronous operations here
-    await savePoliceLocationToFirestore();
-    fetchDirectionsGeoapify();
-
-    setIsProcessing(false); // Set isProcessing back to false when the operations are done
-  }}
-  disabled={isProcessing} // Disable the button when it's processing
-/>
-    ) : (
-      <View style={styles.directionsContainer}>
-        <Text style={styles.helpText}>Help is on the way</Text>
-        <TextInput
-          style={styles.feedbackInput}
-          placeholder="Enter police feedback"
-          onChangeText={(text) => setPoliceFeedback(text)}
-          value={policeFeedback}
-        />
-        <TouchableOpacity onPress={handlePressFeedback}>
-        <View style={styles.sendFeedbackButton}>
-          <Text style={styles.sendFeedbackText}>Send Feedback</Text>
+              <TouchableOpacity onPress={handlePressFeedback}>
+                <View style={styles.sendFeedbackButton}>
+                  <Text style={styles.sendFeedbackText}>Send Feedback</Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.directionsButtonsContainer}>
+                <View style={styles.directionsButton}>
+                  <Button title="Complete" onPress={handleComplete} color="green" />
+                </View>
+                <View style={styles.directionsButton}>
+                  <Button title="Cancel" onPress={handleCancel} color="red" />
+                </View>
+              </View>
+            </View>
+          )}
         </View>
-      </TouchableOpacity>
-        <View style={styles.directionsButtonsContainer}>
-          <View style={styles.directionsButton}>
-            <Button title="Complete" onPress={handleComplete} color="green" />
-          </View>
-          <View style={styles.directionsButton}>
-            <Button title="Cancel" onPress={handleCancel} color="red" />
-          </View>
+      ) : (
+        // You can add an optional view or message here for the "Completed" or "Cancelled" status
+        <View style={styles.completedStatusContainer}>
+          <Text style={styles.completedStatusText}>
+            This emergency has been {emergency.status === 'Completed' ? 'completed' : 'cancelled'}.
+          </Text>
         </View>
-      </View>
-    )}
-  </View>
-);
-};
+      )}
+    </View>
+  );
+      }
 
 const styles = StyleSheet.create({
   map: {

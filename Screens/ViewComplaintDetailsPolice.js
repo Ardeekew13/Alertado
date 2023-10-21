@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 const mapCustomStyle = [ { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] }, { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] }, { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] }, { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] }, { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] }, { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] } ]
 
 const ViewComplaintDetailsPolice = ({ route }) => {
-  const { complaint } = route.params;
+  const { complaint, transactionCompId } = route.params;
   const complaintId = complaint.id;
   const navigation = useNavigation();
   const [feedback, setFeedback] = useState('');
@@ -23,14 +23,15 @@ const ViewComplaintDetailsPolice = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newStatus, setNewStatus] = useState(complaint.status);
   const [complaintColor, setComplaintColor] = useState('black')
+  const [temporaryStatus, setTemporaryStatus] = useState(complaint.status);
   useEffect(() => {
-    if (newStatus === 'Pending') {
+    if (complaint.status === 'Pending') {
       setComplaintColor('orange');
-    } else if (newStatus === 'Ongoing') {
+    } else if (complaint.status === 'Ongoing') {
       setComplaintColor('#08BAE1');
-    } else if (newStatus === 'Completed') {
+    } else if (complaint.status === 'Completed') {
       setComplaintColor('green');
-    } else if (newStatus === 'Cancelled') {
+    } else if (complaint.status === 'Cancelled') {
       setComplaintColor('red');
     } else {
       setComplaintColor('black');
@@ -52,13 +53,18 @@ const ViewComplaintDetailsPolice = ({ route }) => {
   useEffect(() => {
   }, []);
   const handleSaveFeedback = async () => {
+    if (!feedback) {
+      // If feedback is empty, display an error message and return early
+      Alert.alert('Error', 'Feedback cannot be empty.');
+      return;
+    }
     try {
       setLoading(true); // Show loading indicator while sending feedback
 
       const firestore = getFirestore();
+      const complaintRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Complaints'),
-        where('transactionCompId', '==', complaint.transactionCompId)
+        query(complaintRef, where('transactionCompId', '==', complaint.transactionCompId))
       );
 
       if (!querySnapshot.empty) {
@@ -86,34 +92,66 @@ const ViewComplaintDetailsPolice = ({ route }) => {
     }
   };
   const changeStatus = async () => {
+    if (temporaryStatus === complaint.status) {
+      setModalVisible(false);
+      return;
+    }
+    if (complaint.status === 'Ongoing' && temporaryStatus === 'Pending') {
+      
+      Alert.alert('Invalid Status Change', 'You cannot change "Ongoing" to "Pending".');
+      return;
+    }
+    if (complaint.status === 'Completed' && temporaryStatus !== 'Completed') {
+      Alert.alert('Invalid Status Change', 'A complaint that is "Completed" cannot be changed.');
+      return;
+    }
+  
+    if (complaint.status === 'Cancelled' && temporaryStatus !== 'Cancelled') {
+      Alert.alert('Invalid Status Change', 'A complaint that is "Cancelled" cannot be changed.');
+      return;
+    }
     try {
+      setLoading(true);
       const firestore = getFirestore();
-  
+      const reportsRef = collection(firestore, 'Complaints');
       const querySnapshot = await getDocs(
-        collection(firestore, 'Complaints'),
-        where('transactionCompId', '==', complaint.transactionCompId)
+        query(reportsRef, where('transactionCompId', '==', complaint.transactionCompId))
       );
-  
-      if (!querySnapshot.empty) {
-        const complaintDoc = querySnapshot.docs[0];
-        const complaintRef = doc(firestore, 'Complaints', complaintDoc.id);
-  
-        await updateDoc(complaintRef, { status: newStatus });
-  
-        console.log('Complaint status updated successfully');
-        Alert.alert('Successful', 'Status Changed');
-        setModalVisible(false);
-        setNewStatus(newStatus);
 
-        complaint.status = newStatus;
+      if (!querySnapshot.empty) {
+        const reportDoc = querySnapshot.docs[0];
+        const reportRef = doc(firestore, 'Complaints', reportDoc.id);
+
+        await updateDoc(reportRef, { status: temporaryStatus });
+
+        Alert.alert('Status Change Successful', `Status changed to "${temporaryStatus}"`);
+        console.log('Complaint status updated successfully');
+        setModalVisible(false);
+        setNewStatus(temporaryStatus);
+        // Update the status property of the report directly
+        complaint.status = temporaryStatus;
       } else {
-        console.log('Document with transactionCompId does not exist');
-        Alert.alert('Failed', 'Document does not exist');
+        console.log('No matching documents found for transactionCompId:', complaint.transactionComoId);
       }
     } catch (error) {
       console.log('Error updating complaint status:', error);
-      Alert.alert('error', 'Error updating complaint status');
+    } finally {
+      setLoading(false);
     }
+  };
+  const formatDateAndTime = (timestamp) => {
+    const complaintDate = new Date(timestamp);
+  
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+    };
+  
+    return complaintDate.toLocaleDateString(undefined, options);
   };
   return (
     <ScrollView style={styles.flexContainer}>
@@ -131,6 +169,8 @@ const ViewComplaintDetailsPolice = ({ route }) => {
         <Text style={styles.normalText}>{complaint.message}</Text>
         <Text style={styles.boldText}>Complaint Transaction ID: </Text>
         <Text style={styles.largeText}>#{complaint.transactionCompId}</Text>
+        <Text style={styles.boldText}>Date and Reported: </Text>
+          <Text style={styles.normalText}> {formatDateAndTime(complaint.timestamp)}</Text>
         <Text style={styles.boldText}>Status:</Text>
         <View
         style={[
@@ -176,32 +216,35 @@ const ViewComplaintDetailsPolice = ({ route }) => {
             <Text>No Police Feedback available</Text>
           )}
           <View style={styles.separator} />
-    
-          {/* Add TextInput for feedback */}
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your feed back"
-            value={feedback}
-            onChangeText={setFeedback}
-          />
-    
-      
-          <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSaveFeedback}
-          disabled={loading} 
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" /> // Show loading indicator when loading is true
-          ) : (
-            <Text style={styles.saveButtonText}>Save Feedback</Text>
-          )}
+        </View>
+        </View>
+        <TextInput
+        style={styles.textInput}
+        value={feedback}
+        onChangeText={setFeedback}
+        placeholder="Enter your feedback here"
+        multiline={true}
+      />
+
+      {/* "Send Feedback" Button */}
+        <TouchableOpacity style={{backgroundColor: 'red',
+        borderRadius: 5,
+        padding: 10,
+        width: '80%',
+        alignSelf: 'center', // Center horizontally within the parent view
+        marginBottom: 10,
+        justifyContent: 'center',}} onPress={handleSaveFeedback}  disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={styles.buttonText}>Send Feedback</Text>
+        )}
         </TouchableOpacity>
-        </View>
-        </View>
-      <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
-      <Text style={styles.modalButtonText}>Change Status</Text>
-    </TouchableOpacity>
+        {!(complaint.status === 'Completed' || complaint.status === 'Cancelled') && (
+          <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.modalButtonText}>Change Status</Text>
+        </TouchableOpacity>
+            )}
     <Modal visible={modalVisible} transparent={true} animationType="slide">
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
@@ -209,52 +252,56 @@ const ViewComplaintDetailsPolice = ({ route }) => {
           <Ionicons name="ios-close-outline" size={24} color="black" />
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Pending')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Pending')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Pending' && styles.selectedStatusOption,
+              temporaryStatus === 'Pending' && styles.selectedStatusOption,
             ]}
           >
             Pending
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Ongoing')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Ongoing')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Ongoing' && styles.selectedStatusOption,
+              temporaryStatus === 'Ongoing' && styles.selectedStatusOption,
             ]}
           >
             Ongoing
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Completed')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Completed')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Completed' && styles.selectedStatusOption,
+              temporaryStatus === 'Completed' && styles.selectedStatusOption,
             ]}
           >
             Completed
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={() => setNewStatus('Cancelled')}>
+        <TouchableOpacity onPress={() => setTemporaryStatus('Cancelled')}>
           <Text
             style={[
               styles.statusOption,
-              newStatus === 'Cancelled' && styles.selectedStatusOption,
+              temporaryStatus === 'Cancelled' && styles.selectedStatusOption,
             ]}
           >
             Cancel
           </Text>
         </TouchableOpacity>
   
-        <TouchableOpacity onPress={changeStatus} style={styles.confirmButton}>
+        <TouchableOpacity onPress={() => changeStatus(complaint.transactionCompId)} style={styles.confirmButton}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
           <Text style={styles.confirmButtonText}>Confirm</Text>
+        )}
         </TouchableOpacity>
       </View>
     </View>
@@ -378,5 +425,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  
 });
 export default ViewComplaintDetailsPolice;

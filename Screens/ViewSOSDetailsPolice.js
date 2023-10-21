@@ -119,17 +119,38 @@ const ViewSOSDetailsPolice = ({ route }) => {
   
   useEffect(() => {
   }, []);
-  const deleteReport = async () => {
+  const updateEmergency = async (transactionSosId) => {
     try {
-      const firestore = getFirestore();
-      const reportRef = doc(firestore, 'Emergencies', emergency.transactionSosId);
-      await firestore.delete(reportRef);
-      console.log('Report deleted successfully');
-      navigation.goBack();
+      const db = getFirestore();
+      const complaintsRef = collection(db, 'Emergencies');
+      const querySnapshot = await getDocs(query(complaintsRef, where('transactionSosId', '==', transactionSosId.toString())));
+  
+      if (querySnapshot.empty) {
+        console.log('Document not found');
+        return;
+      }
+  
+      const complaintDoc = querySnapshot.docs[0];
+  
+      // Update the status field to "Cancel"
+      await updateDoc(complaintDoc.ref, { status: 'Cancelled' });
+  
+      // Show a success alert
+      Alert.alert('Success', 'Emergency status updated to "Cancel" successfully', [
+        {
+          text: 'OK',
+          onPress: () => {
+              // Navigate back to the previous screen
+              navigation.goBack();
+          },
+        },
+      ]);
     } catch (error) {
-      console.log('Error deleting report:', error);
+      console.log('Error updating Emergency status:', error);
+      // Handle the error here, e.g., show an error message.
     }
   };
+  
  
   const getCurrentUserID = () => {
     const user = auth.currentUser; // Get the currently logged-in user
@@ -195,10 +216,10 @@ const ViewSOSDetailsPolice = ({ route }) => {
       console.log('Error updating complaint status:', error);
     }
   };
-  const handleDeleteButtonPress = () => {
+  const handleDeleteButtonPress = (emergencyId) => {
     Alert.alert(
       'Delete Report',
-      'Are you sure you want to delete the report?',
+      'Are you sure you want to cancel the report?',
       [
         {
           text: 'Cancel',
@@ -207,7 +228,7 @@ const ViewSOSDetailsPolice = ({ route }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: deleteReport,
+          onPress: () => updateEmergency(emergencyId),
         },
       ],
     );
@@ -272,7 +293,9 @@ const ViewSOSDetailsPolice = ({ route }) => {
       </View>
   
       <View style={styles.detailsContainer}>
+      {emergency.status === 'Pending' && (
         <Text style={styles.urgentHelpText}>Needs Urgent Help</Text>
+      )}
         <Text style={styles.normalText}>Name: <Text style={styles.boldText}> {emergency.userFirstName}</Text></Text>
         <Text style={styles.normalText}>Type of Emergency: <Text style={styles.boldText}> {emergency.type}</Text></Text>
         <Text style={styles.normalText}>Transaction ID:  <Text style={styles.boldText}> #{emergency.transactionSosId}</Text></Text>
@@ -291,21 +314,24 @@ const ViewSOSDetailsPolice = ({ route }) => {
                     : `${timeAgo.seconds} seconds`} ago
                 </Text>
             )}
-        {/* ... (other emergency details) */}
-        <View style={styles.buttonContainer}>
-        <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: 'green' }]}
-        onPress={() => handleClick(emergency)}
-      >
-        <Text style={styles.buttonText}>Accept</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: 'red' }]}
-        onPress={handleDeleteButtonPress}
-      >
-        <Text style={styles.buttonText}>Reject</Text>
-      </TouchableOpacity>
-    </View>
+            {emergency.status === 'Pending' && (
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: 'green' }]
+                }
+                onPress={() => handleClick(emergency)}
+                >
+                  <Text style={styles.buttonText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: 'red' }]
+                }
+                onPress={() => handleDeleteButtonPress(emergency.transactionSosId)}
+                >
+                  <Text style={styles.buttonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
   </View>
     </ScrollView>
   );

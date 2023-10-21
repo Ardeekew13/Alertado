@@ -9,6 +9,7 @@ import { collection, doc, onSnapshot, getFirestore,updateDoc,getDoc, query , get
 import { getAuth, signOut, onAuthStateChanged  } from '@firebase/auth';
 import { ref,getDownloadURL, uploadBytes,storageRef,getStorage ,uploadStrings} from 'firebase/storage';
 import firebaseConfig from '../firebaseConfig';
+import { Ionicons } from '@expo/vector-icons'; 
 
 const barangays = [
   "Alegria",
@@ -135,13 +136,19 @@ const AdminHomePage = ()=>{
   
   if (!userData) {
     return <Text>Loading...</Text>;
-  }
+  }const handleStatsButtonPress = () => {
+   
+    navigation.navigate('GenerateStat');
+  };
   return (
     <ScrollView>
       <SafeAreaView className="flex-1">
       <View className="flex-row justify-start items-center">
         <Text className="mx-4 text-lg font-light">Hello,</Text>
         <Text className="text-[#EF4444] font-bold text-lg">System Admin</Text>
+        <TouchableOpacity onPress={handleStatsButtonPress}>
+        <Ionicons name="ios-stats-chart-sharp" size={30} color="black" style={{ marginLeft: 120, marginRight:10 }} />
+        </TouchableOpacity>
       </View>
       <View className="mx-4">
            <Text className="text-[#817E7E] text-md">Check your activities in this dashboard</Text>
