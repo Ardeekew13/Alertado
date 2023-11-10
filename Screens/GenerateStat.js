@@ -7,7 +7,7 @@ import { addDays, startOfWeek, startOfMonth } from 'date-fns'; // Import necessa
 const GenerateStat = () => {
   const [crimeData, setCrimeData] = useState([]);
   const db = getFirestore();
-  const [timeFrame, setTimeFrame] = useState('daily');
+  const [timeFrame, setTimeFrame] = useState('Daily');
   const [todayReports, setTodayReports] = useState(0);
   const [thisWeekReports, setThisWeekReports] = useState(0);
   const [thisMonthReports, setThisMonthReports] = useState(0);
@@ -145,7 +145,7 @@ const GenerateStat = () => {
 
   return (
     <View>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginTop:15 }}>
         {`Crime Report - ${timeFrame}`}
       </Text>
       <Picker
@@ -154,21 +154,21 @@ const GenerateStat = () => {
           setTimeFrame(itemValue);
         }}
       >
-        <Picker.Item label="Daily" value="daily" />
-        <Picker.Item label="Weekly" value="weekly" />
-        <Picker.Item label="Monthly" value="monthly" />
+        <Picker.Item label="Daily" value="Daily" />
+        <Picker.Item label="Weekly" value="Weekly" />
+        <Picker.Item label="Monthly" value="Monthly" />
       </Picker>
-      {timeFrame === 'daily' && (
+      {timeFrame === 'Daily' && (
         <Text style={{ fontSize: 16, textAlign: 'center', backgroundColor: 'white', paddingVertical: 25, marginHorizontal: 20, borderRadius: 6, fontWeight: 'bold' }}>
           {`Reports for Today: ${todayReports}`}
         </Text>
       )}
-      {timeFrame === 'weekly' && (
+      {timeFrame === 'Weekly' && (
         <Text style={{ fontSize: 16, textAlign: 'center', backgroundColor: 'white', paddingVertical: 25, marginHorizontal: 20, borderRadius: 6, fontWeight: 'bold' }}>
           {`Reports for This Week: ${thisWeekReports}`}
         </Text>
       )}
-      {timeFrame === 'monthly' && (
+      {timeFrame === 'Monthly' && (
         <Text style={{ fontSize: 16, textAlign: 'center', backgroundColor: 'white', paddingVertical: 25, marginHorizontal: 20, borderRadius: 6, fontWeight: 'bold' }}>
           {`Reports for This Month: ${thisMonthReports}`}
         </Text>

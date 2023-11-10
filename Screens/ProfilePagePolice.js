@@ -205,13 +205,13 @@ return (
     <View className="justify-left">
     </View>
     </View>
-    <View className="flex flex-row  pr-10 pl-10 mb-5 mt-2">
+    <View className="flex flex-row pl-10 mb-5 mt-2">
       
       {image && <Image className="flex ml-2 mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
       {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50}} />}
       {!image && !userData.selfiePicture && <Image className="flex justify-left ml-4 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
       
-      <View className="flex ml-2 mt-6 mb-4 pl-5">
+      <View className="flex ml-4 mt-6 mb-4 mr-5">
         <Text className=" text-2xl font-semibold ">{userData.Lname}, {userData.Fname}</Text>
         <Text
   style={{

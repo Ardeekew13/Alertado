@@ -85,12 +85,11 @@ const RegistrationForm = () => {
         Fname: data.Fname,
         Lname: data.Lname,
         phone: data.number,
-        password: data.password,
-        confirmPassword: data.confirmPassword,
         role: data.role,
         idProofUrl,
         address: data.barangay,
         status: "Unverified",
+        warning:0,
       });
   
       Alert.alert(

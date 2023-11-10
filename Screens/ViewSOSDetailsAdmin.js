@@ -13,7 +13,7 @@ import {
   Button,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import  MapView, {Marker, Circle } from 'react-native-maps';
+import  MapView, {Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
 import firebaseConfig, { db, auth }from '../firebaseConfig';
@@ -274,6 +274,7 @@ const ViewSOSDetailsAdmin = ({ route }) => {
       <View style={styles.mapContainer}>
         {emergency.citizenLocation && (
           <MapView
+          provider={PROVIDER_GOOGLE}
             style={styles.map}
             ref={mapRef}
             initialRegion={{

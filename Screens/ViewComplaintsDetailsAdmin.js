@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
 import { getFirestore, deleteDoc, doc, collection, query, where, getDocs, updateDoc,getDoc,setDoc,addDoc } from '@firebase/firestore';
 import { initializeApp } from 'firebase/app';
@@ -185,6 +185,7 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
       </View>
       {complaint.location && (
         <MapView
+        provider={PROVIDER_GOOGLE}
         customMapStyle= {mapCustomStyle}
           style={{ flex:1,  height: Dimensions.get('window').height * 0.3,
           marginLeft: 20,
@@ -202,15 +203,26 @@ const ViewComplaintDetailsAdmin = ({ route }) => {
         </MapView>
       )}
       <View>
-          <View style={styles.separator} />
-          <Text style={styles.largeText}>Police Feedbacks</Text>
-          <View style={styles.separator} />
-          {complaint.PoliceFeedback ? (
-            <Text>Your Feedback: {complaint.PoliceFeedback}</Text>
-          ) : (
-            <Text>No Police Feedback available</Text>
-          )}
-          <View style={styles.separator} />
+      <View style={styles.separator} />
+      <Text style={styles.largeText}>Police Feedbacks</Text>
+      <View style={styles.separator} />
+      {complaint.PoliceFeedback ? (
+        complaint.PoliceFeedback.split('\n').map((feedbackLine, index) => (
+          <View key={index} style={styles.feedbackItem}>
+            <View style={styles.chatBubble}>
+              <Text style={styles.feedbackText}>
+                {feedbackLine.split(': ')[1]} {/* Extract feedback message */}
+              </Text>
+              <Text style={styles.timestampText}>
+                {feedbackLine.split(': ')[0]} {/* Extract timestamp */}
+              </Text>
+            </View>
+          </View>
+        ))
+      ) : (
+        <Text>No Police Feedback available</Text>
+      )}
+      <View style={styles.separator} />
         </View>
         </View>
         {!(complaint.status === 'Completed' || complaint.status === 'Cancelled') && (
@@ -397,6 +409,24 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  feedbackText: {
+    color: 'black',
+    fontSize:13,
+    textAlign: 'right'
+  },
+  timestampText: {
+    color: 'black',
+     fontSize:18,
+    textAlign: 'left'
+  },
+  chatBubble: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    maxWidth: '70%',
+    flexDirection: 'column-reverse'
   },
 });
 export default ViewComplaintDetailsAdmin;

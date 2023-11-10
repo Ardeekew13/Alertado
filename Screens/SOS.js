@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
 import { doc, addDoc, collection, getDoc, setDoc, runTransaction,getDocs,getFirestore, updateDoc, onSnapshot, query, where } from 'firebase/firestore';
-import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
+import MapView, { Marker, Circle, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { db } from '../firebaseConfig.js';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,6 +70,7 @@ const SOS = () => {
   const [mapKey, setMapKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
   const [initialRegion, setInitialRegion] = useState({
     // Set initial latitude and longitude based on userSosLocation
     latitude: userSosLocation ? userSosLocation.latitude : 0,
@@ -87,7 +88,34 @@ const SOS = () => {
   const remountMap = () => {
     setMapKey(mapKey + 1);
   };
+  useEffect(() => {
+    console.log('Component Rendered');
+    const auth = getAuth();
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
   
+        // Fetch the user's information here
+        try {
+          const userDocRef = doc(db, 'User', user.uid);
+          const userDocSnapshot = await getDoc(userDocRef);
+  
+          if (userDocSnapshot.exists()) {
+            const userInfo = userDocSnapshot.data(); // Change from userData to userInfo
+            setUserInfo(userInfo); // Change from setUserData to setUserInfo
+          }
+        } catch (error) {
+          console.error('Error fetching user information:', error);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    });
+  
+    return () => {
+      unsubscribeAuth();
+    };
+  }, []);
   useEffect(() => {
     console.log('Component Rendered');
     if (currentUser) {
@@ -186,7 +214,10 @@ const SOS = () => {
           ...prevRegion,
           latitude: citizenLocation.coords.latitude,
           longitude: citizenLocation.coords.longitude,
+          
         }));
+        console.log('latitue',latitude);
+        console.log('longitude',longitude);
       } catch (error) {
         console.error('Error getting current location', error);
       }
@@ -402,6 +433,7 @@ const SOS = () => {
         <View style={styles.container}>
         <View style={styles.ongoingContainer}>
         <MapView
+        provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={{
           latitude: userSosLocation.latitude,
@@ -476,6 +508,7 @@ const SOS = () => {
         <View style={styles.waitingContainer}>
           {userSosLocation && ( // Add this conditional check
             <MapView
+            provider={PROVIDER_GOOGLE}
               style={styles.map}
               initialRegion={{
                 latitude: userSosLocation.latitude,
@@ -530,11 +563,38 @@ const SOS = () => {
           <Text style={styles.text}>
             Feeling unsafe? Tap SOS alert for immediate help in emergencies. Your safety matters!
           </Text>
-          <TouchableOpacity style={styles.sosButton} onPress={() => setIsModalOpen(true)}>
-            <View style={styles.sosButtonInner}>
-              <Text style={styles.sosButtonText}>Send SOS Alert</Text>
-            </View>
-          </TouchableOpacity>
+          <TouchableOpacity
+          style={[
+            styles.sosButton,
+            userInfo && userInfo.isAccountDisabled 
+          ]}
+          onPress={() => {
+            if (userInfo && userInfo.isAccountDisabled) {
+              const lastWarningTime = userInfo.lastWarningTime.toDate();
+              const currentTime = new Date();
+              const timeDifference = currentTime - lastWarningTime;
+              const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - timeDifference) / (60 * 60 * 1000));
+        
+              if (hoursLeft <= 0) {
+                // The user can send SOS, so open the SOS modal
+                setIsModalOpen(true);
+              } else {
+                // Display an alert with the hours left
+                Alert.alert(
+                  'Account Disabled',
+                  `Your account is temporarily disabled. You can send SOS in ${hoursLeft} hours.`
+                );
+              }
+            } else {
+              // Account is not disabled, open the SOS modal
+              setIsModalOpen(true);
+            }
+          }}
+        >
+          <View style={styles.sosButtonInner}>
+            <Text style={styles.sosButtonText}>Send SOS Alert</Text>
+          </View>
+        </TouchableOpacity>
       <Modal visible={isModalOpen} transparent={true} animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -568,6 +628,7 @@ const SOS = () => {
               </TouchableOpacity>
               <View style={styles.mapContainer}>
                 <MapView
+                  provider={PROVIDER_GOOGLE}
                   key={mapKey}
                   style={styles.map}
                   initialRegion={initialRegion}
@@ -605,6 +666,7 @@ const SOS = () => {
       {(emergencyType && markerPosition && isWaitingForPolice && hasPendingSOS) ? (
         <View style={styles.waitingContainer}>
           <MapView
+          provider={PROVIDER_GOOGLE}
             style={styles.map}
             initialRegion={initialRegion}
             onLayout={() => {

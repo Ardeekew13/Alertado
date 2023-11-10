@@ -1,9 +1,10 @@
 {
   "expo": {
-    "name": "my-proj",
-    "slug": "my-proj",
+    "name": "Alertado",
+    "slug": "alertado",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme":"com.ardee13.alertado",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "plugins": [
@@ -24,25 +25,41 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ardee13.myproj"
+      "bundleIdentifier": "com.ardee13.alertado"
     },
     "android": {
+      "package": "com.ardee13.alertado",
+      "versionCode":1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyD5Lz639tE29VJyjTwSBAgnBKJ0-85-yUY"
+        }
+      },
       "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "INTERNET"
+        "android.permission.RECORD_AUDIO"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "permissions": [
+      "android.permission.RECORD_AUDIO",
+      "INTERNET"
+    ],
     "extra": {
       "eas": {
-        "projectId": "cb0b9494-1cb1-486f-9584-26546b43bf05"
+        "projectId": "72e4e92f-6039-4248-b4b1-2b718cb71824"
       }
+    },
+    "owner": "ardee13"
+  },
+  "web": {
+    "favicon": "./assets/favicon.png"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "cb0b9494-1cb1-486f-9584-26546b43bf05"
     }
   }
 }

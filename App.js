@@ -47,6 +47,7 @@ import { Ionicons } from '@expo/vector-icons';
 import GenerateStat from './Screens/GenerateStat'
 import NetInfo from '@react-native-community/netinfo';
 import call from 'react-native-phone-call'
+import UserProfile from './Screens/UserProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -66,7 +67,7 @@ export default function App() {
                   prompt:false,
                   skipCanOpen:true         }
     console.log(netInfo)
-    if (!netInfo.isWifiEnabled) {
+    if (!netInfo.isConnected) {
       Alert.alert(
         'No Internet Connection',
         'You are not connected to the internet. Please open Wi-Fi or cellular data to use the app.',
@@ -252,7 +253,7 @@ export default function App() {
           name="View Complaint Details Police"
           component={ViewComplaintDetailsPolice}
           options={{
-            title: 'View Complaint Details Police',
+            title: 'View Complaint Details',
             headerStyle: {
               backgroundColor: '#FE0000',
             },
@@ -477,6 +478,18 @@ export default function App() {
          <Stack.Screen
          name="AdminVerify"
          component={AdminVerify}
+         />
+         <Stack.Screen
+         name="User Profile"
+         component={UserProfile}
+         options={{
+          title: 'User Profile',
+          headerStyle: {
+            backgroundColor: '#FE0000',
+          },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center', 
+        }}
          />
          <Stack.Screen
          name="Citizen Verification"

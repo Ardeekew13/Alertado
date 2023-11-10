@@ -20,11 +20,30 @@ const ViewReports = () => {
   useEffect(() => {
     const auth = getAuth();
     const firestore = getFirestore();
-    
+  
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        fetchUserData(user.uid, firestore);
-
+        const userDocRef = doc(firestore, 'User', user.uid);
+        const userDocSnapshot = await getDoc(userDocRef);
+  
+        if (userDocSnapshot.exists()) {
+          const userData = userDocSnapshot.data();
+  
+          if (userData.status === 'Disabled' && (!userData.lastWarningTime || (new Date() - new Date(userData.lastWarningTime)) / (1000 * 60 * 60) < 24)) {
+            const remainingTime = 24 - Math.floor((new Date() - new Date(userData.lastWarningTime)) / (1000 * 60 * 60));
+            const alertMessage = `Your account is disabled due to inappropriate use of reporting. Time remaining: ${remainingTime} hours.`;
+  
+            Alert.alert('Account Disabled', alertMessage);
+          } else if ((!userData.lastWarningTime || (new Date() - new Date(userData.lastWarningTime)) / (1000 * 60 * 60) >= 24)) {
+            Alert.alert('Account Enabled', 'You can now report again. Please use it correctly.');
+          } else {
+            // User is not disabled, proceed to fetch user data and reports
+            fetchUserData(user.uid, firestore);
+          }
+        } else {
+          setUserData(null);
+          setReports([]);
+        }
       } else {
         setUserData(null);
         setReports([]);
@@ -146,7 +165,10 @@ const ViewReports = () => {
     navigation.navigate('Report Crime');
   };
   const handleClick = (report) => {
-    navigation.navigate('View Report Details',{report});
+    navigation.navigate('View Report Details', {
+      report: report,
+      userData: userData,
+    });
   };
   const getMinutesAgo = (timestamp) => {
     if (!timestamp) return null;
@@ -344,23 +366,26 @@ const ViewReports = () => {
     </View>
   ))}
 </ScrollView>
-{userData && userData.status === 'Verified' && activeReportsCount < 3 && (
-  <View style={{ position: 'absolute', bottom: 10, right: 20, zIndex: 1 }}>
-    <TouchableOpacity
-      style={{
-        backgroundColor: '#EF4444',
-        height: 60,
-        width: 60,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 30,
-      }}
-      onPress={() => setIsModalOpen(true)}
-    >
-      <Text style={{ color: 'white', fontSize: 24 }}>+</Text>
-    </TouchableOpacity>
-  </View>
-)}
+{userData &&
+  userData.status === 'Verified' &&
+  activeReportsCount < 3 &&
+  (!userData.lastWarningTime || (new Date() - new Date(userData.lastWarningTime)) / (1000 * 60 * 60) >= 24) && (
+    <View style={{ position: 'absolute', bottom: 10, right: 20, zIndex: 1 }}>
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#EF4444',
+          height: 60,
+          width: 60,
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderRadius: 30,
+        }}
+        onPress={() => setIsModalOpen(true)}
+      >
+        <Text style={{ color: 'white', fontSize: 24 }}>+</Text>
+      </TouchableOpacity>
+    </View>
+  )}
 </View>
   );
 };

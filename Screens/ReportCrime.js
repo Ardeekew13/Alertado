@@ -111,7 +111,7 @@ const ReportCrime =()=>{
         setUserLocation({ latitude, longitude });
         setMapReady(true); 
       } catch (error) {
-        console.error('Error getting current location', error);
+        console.error('Error getting current locationsssss', error);
       }
   
       return unsubscribe;

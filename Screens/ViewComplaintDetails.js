@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions,TextInput } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getFirestore, deleteDoc, doc, collection, query, where, getDocs, updateDoc,getDoc,setDoc } from '@firebase/firestore';
 
 const mapCustomStyle = [ { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] }, { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] }, { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] }, { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] }, { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] }, { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] } ]
@@ -131,6 +131,7 @@ const ViewComplaintDetails = ({ route }) => {
       </View>
       {complaint.location && (
         <MapView
+        provider={PROVIDER_GOOGLE}
         customMapStyle= {mapCustomStyle}
           style={{ flex:1,  height: Dimensions.get('window').height * 0.3,
           marginLeft: 20,
@@ -148,15 +149,26 @@ const ViewComplaintDetails = ({ route }) => {
         </MapView>
       )}
       <View>
-          <View style={styles.separator} />
-          <Text style={styles.largeText}>Police Feedbacks</Text>
-          <View style={styles.separator} />
-          {complaint.PoliceFeedback ? (
-            <Text>Your Feedback: {complaint.PoliceFeedback}</Text>
-          ) : (
-            <Text>No Police Feedback available</Text>
-          )}
-          <View style={styles.separator} />
+      <View style={styles.separator} />
+      <Text style={styles.largeText}>Police Feedbacks</Text>
+      <View style={styles.separator} />
+      {complaint.PoliceFeedback ? (
+        complaint.PoliceFeedback.split('\n').map((feedbackLine, index) => (
+          <View key={index} style={styles.feedbackItem}>
+            <View style={styles.chatBubble}>
+              <Text style={styles.feedbackText}>
+                {feedbackLine.split(': ')[1]} {/* Extract feedback message */}
+              </Text>
+              <Text style={styles.timestampText}>
+                {feedbackLine.split(': ')[0]} {/* Extract timestamp */}
+              </Text>
+            </View>
+          </View>
+        ))
+      ) : (
+        <Text>No Police Feedback available</Text>
+      )}
+      <View style={styles.separator} />
         </View>
         </View>
     </ScrollView>
@@ -200,6 +212,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginVertical: 5,
     justifyContent: 'center',
+  },
+  feedbackText: {
+    color: 'black',
+    textAlign: 'right', // Center-align the feedback message
+    fontStyle:'italic',
+  },
+  timestampText: {
+    color: 'black',
+    fontSize:18,
+    textAlign: 'left', // Right-align the timestamp
+  },
+  chatBubble: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    flexDirection: 'column-reverse',
+   },
+    feedbackItem: {
+    marginBottom: 10,
+    maxWidth: '70%',
   },
   // Add more styles as needed
 });

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
 import { getFirestore, deleteDoc, doc, collection, query, where, getDocs, updateDoc,getDoc } from '@firebase/firestore';
 import { initializeApp } from 'firebase/app';
@@ -132,6 +132,7 @@ const ViewReportDetails = ({ route }) => {
         {report.location && (
           <MapView
             customMapStyle= {mapCustomStyle}
+            provider={PROVIDER_GOOGLE}
             style={styles.map}
             ref={mapRef}
             onLayout={handleMapLayout}
@@ -155,24 +156,29 @@ const ViewReportDetails = ({ route }) => {
         )}
 
         <View>
-          <View style={styles.separator} />
-          <Text style={styles.largeText}>Police Feedbacks</Text>
-          <View style={styles.separator} />
-
-          {report.PoliceFeedback ? (
-            // Render police feedback if available
-            <>
-              <Text>{report.PoliceFeedback}</Text>
-              <View style={styles.separator} />
-            </>
-          ) : (
-            // Render "No police feedback available" message
-            <Text>No police feedback available</Text>
-          )}
-
-          
+        <View style={styles.separator} />
+        <Text style={styles.largeText}>Police Feedbacks</Text>
+        <View style={styles.separator} />
+        {report.PoliceFeedback ? (
+          report.PoliceFeedback.split('\n').map((feedbackLine, index) => (
+            <View key={index} style={styles.feedbackItem}>
+              <View style={styles.chatBubble}>
+                <Text style={styles.feedbackText}>
+                  {feedbackLine.split(': ')[1]} {/* Extract feedback message */}
+                </Text>
+                <Text style={styles.timestampText}>
+                  {feedbackLine.split(': ')[0]} {/* Extract timestamp */}
+                </Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text>No Police Feedback available</Text>
+        )}
+        <View style={styles.separator} />
+    
         </View>
-      </View>
+        </View>
     </ScrollView>
   );
 };
@@ -317,6 +323,27 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  feedbackText: {
+    color: 'black',
+    textAlign: 'right', // Center-align the feedback message
+    fontStyle:'italic',
+  },
+  timestampText: {
+    color: 'black',
+    fontSize:18,
+    textAlign: 'left', // Right-align the timestamp
+  },
+  chatBubble: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    flexDirection: 'column-reverse',
+   },
+    feedbackItem: {
+    marginBottom: 10,
+    maxWidth: '70%',
   },
 });
 

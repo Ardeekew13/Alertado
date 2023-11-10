@@ -206,12 +206,12 @@ return (
     </View>
     <View className="flex flex-row justify-center mb-2 mt-2 ">
       
-      {image && <Image className="flex ml-2 mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
-      {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 80, height: 80, marginLeft: 50,}} />}
-      {!image && !userData.selfiePicture && <Image className="flex justify-left ml-4 mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
+      {image && <Image className="flex mt-5 rounded-full" source={{ uri: image.uri }} style={{ width: 80, height: 80 }} />}
+      {!image && userData.selfiePicture && <Image className="flex  mt-5 rounded-full" source={{ uri: userData.selfiePicture }} style={{ width: 110, height: 110, marginLeft: 5,}} />}
+      {!image && !userData.selfiePicture && <Image className="flex justify-left  mt-5 rounded-full" source={{ uri: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }} style={{ width: 80, height: 80 }} />}
       
-      <View className="flex ml-2 mt-4 mb-4">
-        <Text className=" text-2xl font-semibold">{userData.Lname}, {userData.Fname}</Text>
+      <View className="flex ml-4 mt-6 mb-4 mr-5 justify-center">
+        <Text className=" text-xl font-semibold">{userData.Lname}, {userData.Fname}</Text>
         <Text
   style={{
     width: userData.status === 'Unverified' ? 90 : 70,
@@ -249,7 +249,7 @@ return (
       
       </View>
       
-      <Text className="mx-auto font-bold text-xl mb-4 ">Personal Information</Text>
+      <Text className="mx-auto font-bold text-xl mb-5 mt-5 ">Personal Information</Text>
       <View className="mx-auto mb-2 ">
       <View className="flex-row">
       <View className="justify-center mr-2">

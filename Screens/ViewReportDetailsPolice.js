@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Dimensions, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { ScrollView } from 'react-native-gesture-handler';
 import { getFirestore, deleteDoc, doc, collection, query, where, getDocs, updateDoc,getDoc,setDoc,addDoc } from '@firebase/firestore';
 import { initializeApp } from 'firebase/app';
@@ -15,6 +15,7 @@ const ViewReportDetailsPolice = ({ route }) => {
   const reportId = report.id;
   const [feedback, setFeedback] = useState('');
   const [mapReady, setMapReady] = useState(false);
+  const [userData, setUserData] = useState(false);
   const [mapLayout, setMapLayout] = useState(false);
   const mapRef = useRef(null);
   const navigation = useNavigation();
@@ -23,6 +24,36 @@ const ViewReportDetailsPolice = ({ route }) => {
   const [loading, setLoading] = useState(false);
   const [temporaryStatus, setTemporaryStatus] = useState(report.status);
   const [reportColor, setReportColor] = useState('black')
+  const warningThreshold = 3;
+  const isAccountDisabled = userData.warning === 3;
+  const warningResetThresholdHours = 24;
+  const [warningButtonLabel, setWarningButtonLabel] = useState('');
+  const [disable, setDisable] = useState(false);
+  const [finaldisable, setFinalDisable] = useState(false);
+
+
+  useEffect(() => {
+    if (userData.warning >= warningThreshold) {
+      if (userData.warning === 3) {
+        setWarningButtonLabel('Disabled');
+        setFinalDisable(true);
+      } else if (userData.warning === 2) {
+        setWarningButtonLabel('Disable Account');
+        setDisable(true);
+        setFinalDisable(false);
+      } else {
+        setWarningButtonLabel('Warning');
+        setFinalDisable(false);
+        setDisable(false);
+      }
+    } else {
+      setWarningButtonLabel('Warning');
+      setFinalDisable(false);
+      setDisable(false);
+    }
+    console.log('userData.warning:', userData.warning); // Add this line
+  }, [userData.warning]);
+
   useEffect(() => {
     if (report.status === 'Pending') {
       setReportColor('orange');
@@ -48,9 +79,76 @@ const ViewReportDetailsPolice = ({ route }) => {
       mapRef.current.fitToElements(true);
     }
   }, [mapLayout]);
-
   useEffect(() => {
+    // Check and log the warning count when it changes
+    console.log('Warning count has changed:', userData.warning);
+  }, [report.warning]);
+  useEffect(() => {
+    // Check and reset the warning count on component load
+    checkAndResetWarningCount();
+  
+    // Set up an interval to periodically check and reset the warning count
+    const interval = setInterval(() => {
+      checkAndResetWarningCount();
+    },  1800000); // Check every 10 seconds (10000 milliseconds)
+  
+    return () => {
+      clearInterval(interval); // Clear the interval when the component unmounts
+    };
   }, []);
+  
+  useEffect(() => {
+    if (userData.warning === 2) {
+      setDisable(true);
+    } else {
+      setDisable(false);
+    }
+  }, [userData.warning]);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const firestore = getFirestore();
+        const userRef = doc(firestore, 'User', report.userId);
+    
+        const userSnapshot = await getDoc(userRef);
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.data();
+          setUserData(userData);
+    
+          // Now, you can access the 'warning' count from the userData
+          const warningCount = userData.warning || 0;
+          console.log(`Warning count: ${warningCount}`);
+          
+          // Update the button label based on the warning count
+          updateWarningButtonLabel(warningCount);
+          setDisable(warningCount === 2);
+        } else {
+          // Handle the case where the user data doesn't exist
+          console.log('User data not found.');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+  
+    fetchUserData();
+  }, [report.userId]);
+  console.log('disable',disable);
+  console.log('fdisable',finaldisable);
+  const updateWarningButtonLabel = (warningCount) => {
+    if (warningCount >= warningThreshold) {
+      if (warningCount === 3) {
+        setWarningButtonLabel('Disabled');
+      } else if (warningCount === 2) {
+        setWarningButtonLabel('Disable Account');
+      } else {
+        setWarningButtonLabel('Warning');
+      }
+    } else {
+      setWarningButtonLabel('Warning');
+    }
+  };
+  
   const handleSaveFeedback = async () => {
     if (!feedback) {
       // If feedback is empty, display an error message and return early
@@ -71,11 +169,20 @@ const ViewReportDetailsPolice = ({ route }) => {
         const reportDoc = querySnapshot.docs[0];
         const reportRef = doc(firestore, 'Reports', reportDoc.id);
   
-        await updateDoc(reportRef, { PoliceFeedback: feedback }, { merge: true });
+        const existingFeedback = report.PoliceFeedback || ''; // Get existing feedback
+        const timestamp = new Date().toLocaleString(); // Get current timestamp
+  
+        let newFeedback = feedback + ': ' + timestamp; // Create new feedback message
+  
+        if (existingFeedback) {
+          newFeedback = existingFeedback + '\n' + newFeedback; // Append new feedback with timestamp
+        }
+  
+        await updateDoc(reportRef, { PoliceFeedback: newFeedback }, { merge: true });
   
         console.log('Complaint feedback successfully sent');
   
-        report.PoliceFeedback = feedback;
+        report.PoliceFeedback = newFeedback; // Update the component state
         Alert.alert('Feedback Sent', 'Your feedback has been submitted successfully.');
         setFeedback('');
       } else {
@@ -136,6 +243,159 @@ const ViewReportDetailsPolice = ({ route }) => {
       setLoading(false);
     }
   };
+  const checkAndResetWarningCount = async () => {
+    try {
+      const firestore = getFirestore();
+      const userRef = doc(firestore, 'User', report.userId);
+      const userSnapshot = await getDoc(userRef);
+      const userData = userSnapshot.data();
+  
+      if (userData && userData.warning >= warningThreshold && userData.lastWarningTime) {
+        const currentTime = new Date();
+        const lastWarningTime = new Date(userData.lastWarningTime);
+        const hoursPassed = (currentTime - lastWarningTime) / (1000 * 60 * 60);
+        if (hoursPassed >= warningResetThresholdHours) {
+          // Reset the warning count
+          await setDoc(userRef, { warning: 0, lastWarningTime: null }, { merge: true });
+          
+          // Update the local state to reflect the change
+          userData.warning = 0;
+          userData.lastWarningTime = null;
+          setFinalDisable(false);
+          setDisable(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking and resetting warning count:', error);
+    }
+  };
+  useEffect(() => {
+    // Check and log the warning count when it changes
+    console.log('Warning count has changed:', userData.warning);
+  }, [userData.warning]);
+ 
+const handleWarning = async () => {
+  if (userData.warning >= warningThreshold) {
+    if (userData.warning === 3) {
+      Alert.alert(
+        'User Disabled',
+        'The user is disabled for 24 hours due to excessive warnings. You can report again after 24 hours.',
+        [
+          {
+            text: 'OK',
+            onPress: () => console.log('OK Pressed'), // Handle the OK button action
+          },
+        ]
+      );
+      return;
+    } else if (userData.warning === 2 || updatedWarnings === 2) {
+      // Handle the logic for the "Disable Account" button
+      Alert.alert(
+        'Confirm Disable Account',
+        'Are you sure you want to disable this user\'s account?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Disable Account',
+            style: 'destructive',
+            onPress: () => {
+              // Implement logic to disable the user's account here
+              // You should set userData.warning to 3 and update the Firestore record
+              // Additionally, set a timestamp for the lastWarningTime if not set
+              Alert.alert('Account Disabled', 'The user\'s account has been disabled.');
+              // You can add additional code to handle the account disabling logic
+            },
+          },
+        ]
+      );
+    }
+  } else {
+    // Handle the "Warning" button logic
+    Alert.alert(
+      'Confirm Warning',
+      'Are you sure you want to warn this user for using the reporting system inappropriately?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Warn',
+          style: 'destructive',
+          onPress: async () => {
+            // Implement logic to increment the warning count
+            try {
+              const firestore = getFirestore();
+              const userRef = doc(firestore, 'User', report.userId);
+
+              // Retrieve the existing warning count from Firestore
+              const userSnapshot = await getDoc(userRef);
+              const existingWarnings = userSnapshot.data().warning || 0; // Default to 0 if it's not defined
+
+              // Increment the warning count
+              const updatedWarnings = existingWarnings + 1;
+              console.log('Updating warning count to', updatedWarnings);
+              await setDoc(userRef, { warning: updatedWarnings }, { merge: true },);
+
+              if (updatedWarnings === 2) {
+                // Alert the user
+                Alert.alert(
+                  'Warning Issued',
+                  'The user has received 2 warnings. Their account can now be disabled.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: async () => {
+                        // Update userData.warning to 2
+                        const firestore = getFirestore();
+                        const userRef = doc(firestore, 'User', report.userId);
+
+                        const userSnapshot = await getDoc(userRef);
+                        const updatedWarnings = existingWarnings + 1;
+                        await setDoc(userRef, { warning: updatedWarnings }, { merge: true });
+                        setDisable(true);
+                        console.log('OK Pressed');
+                      },
+                    },
+                  ]
+                );
+              
+              } else if (updatedWarnings === 3) {
+                // Set the lastWarningTime only when the warning count reaches 3
+                await setDoc(userRef, { warning: updatedWarnings, lastWarningTime: new Date().toISOString(), isAccountDisabled:true, }, { merge: true });
+                setFinalDisable(true);
+                // Handle the "Disabled" button state here
+                Alert.alert(
+                  'Account Disabled',
+                  'The user has been disabled due to excessive warnings. They can be re-enabled after 24 hours.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => console.log('OK Pressed'),
+                    },
+                  ]
+                );
+                // You can also add additional logic to disable the user's account here
+              } else {
+                // Increment the warning count without setting lastWarningTime
+                await setDoc(userRef, { warning: updatedWarnings }, { merge: true });
+                // Update the local state to reflect the change
+                setUserData({ ...userData, warning: updatedWarnings });
+                Alert.alert('User Warned', 'The user has been warned.');
+              }
+            } catch (error) {
+              console.error('Error updating user account:', error);
+            }
+          },
+        },
+      ]
+    );
+  }
+};
+
   const handleDeleteButtonPress = () => {
     Alert.alert(
       'Cancel',
@@ -153,6 +413,7 @@ const ViewReportDetailsPolice = ({ route }) => {
       ],
     );
   };
+
   const formatDateAndTime = (timestamp) => {
     const reportDate = new Date(timestamp);
   
@@ -167,6 +428,7 @@ const ViewReportDetailsPolice = ({ route }) => {
   
     return reportDate.toLocaleDateString(undefined, options);
   };
+  console.log('Warning jrjr',userData.warning)
   return (
     <ScrollView style={styles.flexContainer}>
       <View style={styles.flexContainer}>
@@ -206,6 +468,7 @@ const ViewReportDetailsPolice = ({ route }) => {
 
         {report.location && (
           <MapView
+            provider={PROVIDER_GOOGLE}
             style={styles.map}
             ref={mapRef}
             onLayout={handleMapLayout}
@@ -229,15 +492,26 @@ const ViewReportDetailsPolice = ({ route }) => {
         )}
 
         <View>
-          <View style={styles.separator} />
-          <Text style={styles.largeText}>Police Feedbacks</Text>
-          <View style={styles.separator} />
-          {report.PoliceFeedback ? (
-            <Text>Your Feedback: {report.PoliceFeedback}</Text>
-          ) : (
-            <Text>No Police Feedback available</Text>
-          )}
-          <View style={styles.separator} />
+        <View style={styles.separator} />
+        <Text style={styles.largeText}>Police Feedbacks</Text>
+        <View style={styles.separator} />
+        {report.PoliceFeedback ? (
+          report.PoliceFeedback.split('\n').map((feedbackLine, index) => (
+            <View key={index} style={styles.feedbackItem}>
+              <View style={styles.chatBubble}>
+                <Text style={styles.feedbackText}>
+                  {feedbackLine.split(': ')[1]} {/* Extract feedback message */}
+                </Text>
+                <Text style={styles.timestampText}>
+                  {feedbackLine.split(': ')[0]} {/* Extract timestamp */}
+                </Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text>No Police Feedback available</Text>
+        )}
+        <View style={styles.separator} />
     
         </View>
         </View>
@@ -261,6 +535,28 @@ const ViewReportDetailsPolice = ({ route }) => {
         <Text style={styles.buttonText}>Send Feedback</Text>
       )}
        </TouchableOpacity>
+       
+       <TouchableOpacity
+        style={{
+          backgroundColor: (userData.warning === 3 || finaldisable) ? 'gray' : 'orange',
+          borderRadius: 5,
+          padding: 10,
+          width: '80%',
+          alignSelf: 'center',
+          marginBottom: 10,
+          justifyContent: 'center',
+        }}
+        onPress={(userData.warning === 3 || finaldisable) ? null : handleWarning}
+        disabled={userData.warning === 3 || finaldisable}
+      >
+       <Text style={{ textAlign: 'center', color: 'white', fontWeight: 'bold' }}>
+         {finaldisable
+           ? 'Disabled'
+           :  disable // Check if 'disable' is true
+           ? 'Disable Account'
+           : 'Warning'}
+       </Text>
+     </TouchableOpacity>
         {!(report.status === 'Completed' || report.status === 'Cancelled') && (
       <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(true)}>
       <Text style={styles.modalButtonText}>Change Status</Text>
@@ -323,6 +619,7 @@ const ViewReportDetailsPolice = ({ route }) => {
           <Text style={styles.confirmButtonText}>Confirm</Text>
         )}
         </TouchableOpacity>
+      
       </View>
     </View>
   </Modal>
@@ -402,6 +699,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+
   textInput: {
     borderWidth: 1,
     borderColor: 'gray',
@@ -423,6 +721,27 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center'
+  },
+  feedbackText: {
+    color: 'black',
+    textAlign: 'right', // Center-align the feedback message
+    fontStyle:'italic',
+  },
+  timestampText: {
+    color: 'black',
+    fontSize:18,
+    textAlign: 'left', // Right-align the timestamp
+  },
+  chatBubble: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    flexDirection: 'column-reverse',
+   },
+    feedbackItem: {
+    marginBottom: 10,
+    maxWidth: '70%',
   },
   largeText: {
     fontSize: 16,
@@ -501,6 +820,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+
+  disabledButton: {
+    backgroundColor: 'gray',
+    // Add other button styles as needed
+  },
+
+  warningButtonText: {
+    color: 'white',
+    fontSize: 16,
   },
 });
 

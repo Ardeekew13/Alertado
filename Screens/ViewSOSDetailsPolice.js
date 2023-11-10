@@ -11,7 +11,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import  MapView, {Marker, Circle } from 'react-native-maps';
+import  MapView, {Marker, Circle, PROVIDER_GOOGLE} from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
 import firebaseConfig, { db, auth }from '../firebaseConfig';
@@ -56,7 +56,35 @@ const ViewSOSDetailsPolice = ({ route }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const pingingCircleScale = new Animated.Value(1); // Add this for pinging effect
   const pingingCircleRadius = new Animated.Value(0); // Add this for pinging effect
+  const warningThreshold = 3;
+  const [userData, setUserData] = useState(false);
+  const isAccountDisabled = userData.warning === 3;
+  const warningResetThresholdHours = 24;
+  const [warningButtonLabel, setWarningButtonLabel] = useState('');
+  const [disable, setDisable] = useState(false);
+  const [finaldisable, setFinalDisable] = useState(false);
 
+  useEffect(() => {
+    if (userData.warning >= warningThreshold) {
+      if (userData.warning === 3) {
+        setWarningButtonLabel('Disabled');
+        setFinalDisable(true);
+      } else if (userData.warning === 2) {
+        setWarningButtonLabel('Disable Account');
+        setDisable(true);
+        setFinalDisable(false);
+      } else {
+        setWarningButtonLabel('Warning');
+        setFinalDisable(false);
+        setDisable(false);
+      }
+    } else {
+      setWarningButtonLabel('Warning');
+      setFinalDisable(false);
+      setDisable(false);
+    }
+    console.log('userData.warning:', userData.warning); // Add this line
+  }, [userData.warning]);
 
   useEffect(() => {
     // Initialize Firebase auth
@@ -88,7 +116,72 @@ const ViewSOSDetailsPolice = ({ route }) => {
 
     Animated.loop(pulseAnimation).start();
   };
-
+ useEffect(() => {
+    // Check and reset the warning count on component load
+    checkAndResetWarningCount();
+  
+    // Set up an interval to periodically check and reset the warning count
+    const interval = setInterval(() => {
+      checkAndResetWarningCount();
+    },  1800000); // Check every 10 seconds (10000 milliseconds)
+  
+    return () => {
+      clearInterval(interval); // Clear the interval when the component unmounts
+    };
+  }, []);
+  
+  useEffect(() => {
+    if (userData.warning === 2) {
+      setDisable(true);
+    } else {
+      setDisable(false);
+    }
+  }, [userData.warning]);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const firestore = getFirestore();
+        const userRef = doc(firestore, 'User', emergency.userId);
+    
+        const userSnapshot = await getDoc(userRef);
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.data();
+          setUserData(userData);
+    
+          // Now, you can access the 'warning' count from the userData
+          const warningCount = userData.warning || 0;
+          console.log(`Warning count: ${warningCount}`);
+          
+          // Update the button label based on the warning count
+          updateWarningButtonLabel(warningCount);
+          setDisable(warningCount === 2);
+        } else {
+          // Handle the case where the user data doesn't exist
+          console.log('User data not found.');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+  
+    fetchUserData();
+  }, [emergency.userId]);
+  console.log('disable',disable);
+  console.log('fdisable',finaldisable);
+  const updateWarningButtonLabel = (warningCount) => {
+    if (warningCount >= warningThreshold) {
+      if (warningCount === 3) {
+        setWarningButtonLabel('Disabled');
+      } else if (warningCount === 2) {
+        setWarningButtonLabel('Disable Account');
+      } else {
+        setWarningButtonLabel('Warning');
+      }
+    } else {
+      setWarningButtonLabel('Warning');
+    }
+  };
+  
   useEffect(() => {
     if (mapReady && mapRef.current) {
       const region = {
@@ -151,7 +244,158 @@ const ViewSOSDetailsPolice = ({ route }) => {
     }
   };
   
+  const checkAndResetWarningCount = async () => {
+    try {
+      const firestore = getFirestore();
+      const userRef = doc(firestore, 'User', emergency.userId);
+      const userSnapshot = await getDoc(userRef);
+      const userData = userSnapshot.data();
+  
+      if (userData && userData.warning >= warningThreshold && userData.lastWarningTime) {
+        const currentTime = new Date();
+        const lastWarningTime = new Date(userData.lastWarningTime);
+        const hoursPassed = (currentTime - lastWarningTime) / (1000 * 60 * 60);
+        if (hoursPassed >= warningResetThresholdHours) {
+          // Reset the warning count
+          await setDoc(userRef, { warning: 0, lastWarningTime: null }, { merge: true });
+          
+          // Update the local state to reflect the change
+          userData.warning = 0;
+          userData.lastWarningTime = null;
+          setFinalDisable(false);
+          setDisable(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking and resetting warning count:', error);
+    }
+  };
+  useEffect(() => {
+    // Check and log the warning count when it changes
+    console.log('Warning count has changed:', userData.warning);
+  }, [userData.warning]);
  
+const handleWarning = async () => {
+  if (userData.warning >= warningThreshold) {
+    if (userData.warning === 3) {
+      Alert.alert(
+        'User Disabled',
+        'The user is disabled for 24 hours due to excessive warnings. You can send SOS again after 24 hours.',
+        [
+          {
+            text: 'OK',
+            onPress: () => console.log('OK Pressed'), // Handle the OK button action
+          },
+        ]
+      );
+      return;
+    } else if (userData.warning === 2 || updatedWarnings === 2) {
+      // Handle the logic for the "Disable Account" button
+      Alert.alert(
+        'Confirm Disable Account',
+        'Are you sure you want to disable this user\'s account?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Disable Account',
+            style: 'destructive',
+            onPress: () => {
+              // Implement logic to disable the user's account here
+              // You should set userData.warning to 3 and update the Firestore record
+              // Additionally, set a timestamp for the lastWarningTime if not set
+              Alert.alert('Account Disabled', 'The user\'s account has been disabled.');
+              // You can add additional code to handle the account disabling logic
+            },
+          },
+        ]
+      );
+    }
+  } else {
+    // Handle the "Warning" button logic
+    Alert.alert(
+      'Confirm Warning',
+      'Are you sure you want to warn this user for using the reporting system inappropriately?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Warn',
+          style: 'destructive',
+          onPress: async () => {
+            // Implement logic to increment the warning count
+            try {
+              const firestore = getFirestore();
+              const userRef = doc(firestore, 'User', emergency.userId);
+
+              // Retrieve the existing warning count from Firestore
+              const userSnapshot = await getDoc(userRef);
+              const existingWarnings = userSnapshot.data().warning || 0; // Default to 0 if it's not defined
+
+              // Increment the warning count
+              const updatedWarnings = existingWarnings + 1;
+              console.log('Updating warning count to', updatedWarnings);
+              await setDoc(userRef, { warning: updatedWarnings }, { merge: true });
+
+              if (updatedWarnings === 2) {
+                // Alert the user
+                Alert.alert(
+                  'Warning Issued',
+                  'The user has received 2 warnings. Their account can now be disabled.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: async () => {
+                        // Update userData.warning to 2
+                        const firestore = getFirestore();
+                        const userRef = doc(firestore, 'User', emergency.userId);
+
+                        const userSnapshot = await getDoc(userRef);
+                        const updatedWarnings = existingWarnings + 1;
+                        await setDoc(userRef, { warning: updatedWarnings }, { merge: true });
+                        setDisable(true);
+                        console.log('OK Pressed');
+                      },
+                    },
+                  ]
+                );
+              
+              } else if (updatedWarnings === 3) {
+                // Set the lastWarningTime only when the warning count reaches 3
+                await setDoc(userRef, { warning: updatedWarnings, lastWarningTime: new Date().toISOString(), isAccountDisabled:true,}, { merge: true });
+                setFinalDisable(true);
+                // Handle the "Disabled" button state here
+                Alert.alert(
+                  'Account Disabled',
+                  'The user has been disabled due to excessive warnings. They can be re-enabled after 24 hours.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => console.log('OK Pressed'),
+                    },
+                  ]
+                );
+                // You can also add additional logic to disable the user's account here
+              } else {
+                // Increment the warning count without setting lastWarningTime
+                await setDoc(userRef, { warning: updatedWarnings }, { merge: true });
+                // Update the local state to reflect the change
+                setUserData({ ...userData, warning: updatedWarnings });
+                Alert.alert('User Warned', 'The user has been warned.');
+              }
+            } catch (error) {
+              console.error('Error updating user account:', error);
+            }
+          },
+        },
+      ]
+    );
+  }
+};
   const getCurrentUserID = () => {
     const user = auth.currentUser; // Get the currently logged-in user
     if (user) {
@@ -218,8 +462,8 @@ const ViewSOSDetailsPolice = ({ route }) => {
   };
   const handleDeleteButtonPress = (emergencyId) => {
     Alert.alert(
-      'Delete Report',
-      'Are you sure you want to cancel the report?',
+      'Delete SOS',
+      'Are you sure you want to cancel the SOS?',
       [
         {
           text: 'Cancel',
@@ -257,6 +501,7 @@ const ViewSOSDetailsPolice = ({ route }) => {
       <View style={styles.mapContainer}>
         {emergency.citizenLocation && (
           <MapView
+          provider={PROVIDER_GOOGLE}
             style={styles.map}
             ref={mapRef}
             initialRegion={{
@@ -330,8 +575,33 @@ const ViewSOSDetailsPolice = ({ route }) => {
                 >
                   <Text style={styles.buttonText}>Reject</Text>
                 </TouchableOpacity>
+               
               </View>
+              
             )}
+            <TouchableOpacity
+            style={{
+              backgroundColor: (userData.warning === 3 || finaldisable) ? 'gray' : 'orange',
+              borderRadius: 5,
+              padding: 10,
+              width: '95%',
+              height:'20%',
+              alignSelf: 'center',
+              marginBottom: 10,
+              justifyContent: 'center',
+              marginTop:10,
+            }}
+            onPress={(userData.warning === 3 || finaldisable) ? null : handleWarning}
+            disabled={userData.warning === 3 || finaldisable}
+          >
+           <Text style={{ textAlign: 'center', color: 'white', fontWeight: 'bold' }}>
+             {finaldisable
+               ? 'Disabled'
+               :  disable // Check if 'disable' is true
+               ? 'Disable Account'
+               : 'Warning'}
+           </Text>
+         </TouchableOpacity>
   </View>
     </ScrollView>
   );

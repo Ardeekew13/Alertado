@@ -316,21 +316,24 @@ const ViewComplaints = () => {
     </View>
   ))}
   </ScrollView>
-  {userData && userData.status === 'Verified' && activeComplaintsCount < 3 && (
-    <View style={{ position: 'absolute', bottom: 10, right: 20, zIndex: 1 }}>
-      <TouchableOpacity
-        style={{
-          backgroundColor: '#EF4444',
-          height: 60,
-          width: 60,
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderRadius: 30,
-        }}
-        onPress={() => setIsModalOpen(true)}
-      >
-        <Text style={{ color: 'white', fontSize: 24 }}>+</Text>
-      </TouchableOpacity>
+  {userData &&
+    userData.status === 'Verified' &&
+    activeComplaintsCount < 3 &&
+    (!userData.lastWarningTime || (new Date() - new Date(userData.lastWarningTime)) / (1000 * 60 * 60) >= 24) && (
+      <View style={{ position: 'absolute', bottom: 10, right: 20, zIndex: 1 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#EF4444',
+            height: 60,
+            width: 60,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 30,
+          }}
+          onPress={() => setIsModalOpen(true)}
+        >
+          <Text style={{ color: 'white', fontSize: 24 }}>+</Text>
+        </TouchableOpacity>
     </View>
   )}  
 </View>

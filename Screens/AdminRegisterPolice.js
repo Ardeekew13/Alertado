@@ -69,6 +69,8 @@ const AdminRegisterPolice = () => {
   const backButton= async () => {
     navigation.goBack()
   };
+  const defaultPoliceImage = 'https://img.freepik.com/premium-vector/cop-icon-flat-style-design-police-officer-avatar-vector-illustration-isolated-white-background-symbol-security-law-order-policeman-sheriff_153097-648.jpg'; 
+const defaultUserImage = 'https://w7.pngwing.com/pngs/223/244/png-transparent-computer-icons-avatar-user-profile-avatar-heroes-rectangle-black.png  '; 
   const handleSubmit = async () => {
     
     let errorType = null;
@@ -157,7 +159,15 @@ const AdminRegisterPolice = () => {
       setRoleError("");
       setPhoneError("");
       setAddressError("");
-  
+     
+     
+      let defaultImageUrl = '';
+      if (role === 'Police') {
+        defaultImageUrl = defaultPoliceImage;
+      } else if (role === 'Citizen') {
+        defaultImageUrl = defaultUserImage;
+      }
+    
       try {
         //Firebase auth
         const authentication = getAuth();
@@ -176,18 +186,16 @@ const AdminRegisterPolice = () => {
           Fname,
           Lname,
           phone,
-          password,
-          confirmPassword,
           role,
-          idProofUrl, 
+          selfiePicture: defaultImageUrl,
           address,
           status: role === "Police" ? "Verified" : "Unverified", // Check role and set status
         });
         console.log();
         Alert.alert(
           'Registered Successfully!', 
-          'You can now log in to your account', 
-          [    {      text: 'Sign in',      onPress: () => navigation.goBack() }  ],
+          'You can now use the  account created', 
+          [    {      text: 'Okay',      onPress: () => navigation.goBack() }  ],
           { 
             containerStyle: { 
               justifyContent: 'center', 

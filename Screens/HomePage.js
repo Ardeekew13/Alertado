@@ -55,10 +55,13 @@ const HomePage =()=>{
   const [totalReportsCount, setTotalReportsCount] = useState(0);
   const [totalComplaintsCount, setComplaintsCount] = useState(0);
   const [totalEmergenciesCount,  setEmergenciesCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAccountDisabled, setIsAccountDisabled]= useState(false);
   
   const navigation=useNavigation()
   useEffect(() => {
+    console.log('userData:', userData);
+console.log('isAccountDisabled:', isAccountDisabled);
     const fetchUserCounts = async () => {
       try {
         const db = getFirestore();
@@ -69,7 +72,30 @@ const HomePage =()=>{
         const userSnapshot = await getDoc(userRef);
         const userData = userSnapshot.data();
         setUserData(userData);
-  
+
+        if (userData.isAccountDisabled) {
+          const lastWarningTime = userData.lastWarningTime.toDate();
+          const currentTime = new Date();
+          const timeDifference = currentTime - lastWarningTime;
+        
+          if (timeDifference >= 24 * 60 * 60 * 1000) {
+            // 24 hours have passed, enable the account
+            await updateDoc(userRef, {
+              lastWarningTime: null,
+              warning: 0,
+              isAccountDisabled: false,
+            });
+            setIsAccountDisabled(false);
+          } else {
+            const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - timeDifference) / (60 * 60 * 1000)); // Calculate hours remaining
+            setIsAccountDisabled(true);
+        
+            Alert.alert(
+              'Account Disabled',
+              `Your account is temporarily disabled. It will be enabled after ${hoursLeft} hours.`
+            );
+          }
+        }
         // Fetch the user's report count and listen for real-time updates
         const reportsCollection = collection(db, 'Reports');
         const userReportsQuery = query(
@@ -164,11 +190,11 @@ const HomePage =()=>{
   };
   return (
     <ScrollView>
-      <SafeAreaView className="flex-1">
+      <SafeAreaView className="flex-1 mt-5">
       <View className="flex-row justify-start items-center">
       <Text className="mx-4 text-lg font-light">Hello,</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text className="text-[#EF4444] font-bold text-lg">{userData.Fname} {userData.Lname}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center',  }}>
+        <Text className="text-[#EF4444] font-bold text-lg justify-center">{userData.Fname} {userData.Lname}</Text>
         <TouchableOpacity onPress={handleStatsButtonPress}>
         <Ionicons name="ios-stats-chart-sharp" size={30} color="black" style={{ marginLeft: 150, marginRight:10 }} />
         </TouchableOpacity>

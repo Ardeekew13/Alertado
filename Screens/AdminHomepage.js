@@ -147,7 +147,7 @@ const AdminHomePage = ()=>{
         <Text className="mx-4 text-lg font-light">Hello,</Text>
         <Text className="text-[#EF4444] font-bold text-lg">System Admin</Text>
         <TouchableOpacity onPress={handleStatsButtonPress}>
-        <Ionicons name="ios-stats-chart-sharp" size={30} color="black" style={{ marginLeft: 120, marginRight:10 }} />
+        <Ionicons name="ios-stats-chart-sharp" size={30} color="black" style={{ marginLeft: 150, marginRight:10 }} />
         </TouchableOpacity>
       </View>
       <View className="mx-4">
